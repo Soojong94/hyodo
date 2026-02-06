@@ -89,8 +89,10 @@
       <!-- 회원가입 폼 -->
       <div id="signupForm" class="space-y-3 hidden">
         <input id="signupId" type="email" placeholder="이메일" class="auth-input"
+          onkeydown="if(event.key==='Enter') document.getElementById('signupNick').focus()">
+        <input id="signupNick" type="text" placeholder="닉네임" class="auth-input"
           onkeydown="if(event.key==='Enter') document.getElementById('signupPw').focus()">
-        <input id="signupPw" type="password" placeholder="비밀번호 (4자 이상)" class="auth-input"
+        <input id="signupPw" type="password" placeholder="비밀번호 (6자 이상)" class="auth-input"
           onkeydown="if(event.key==='Enter') doSignup()">
         <button onclick="doSignup()"
           class="w-full bg-green-500 text-white text-xl font-bold py-4 rounded-2xl active:bg-green-700 transition-all active:scale-95">
@@ -359,13 +361,14 @@
 
     async function doSignup() {
       const email = document.getElementById('signupId').value.trim();
+      const nick = document.getElementById('signupNick').value.trim();
       const pw = document.getElementById('signupPw').value.trim();
 
-      if (!email || !pw) { showAuthError('signupError', '이메일과 비밀번호를 입력해주세요.'); return; }
+      if (!email || !nick || !pw) { showAuthError('signupError', '모든 정보를 입력해주세요.'); return; }
       
       setAuthLoading('signup', true);
 
-      const result = await signup(email, pw);
+      const result = await signup(email, pw, nick);
       if (result.ok) {
         setAuthLoading('signup', false);
         
@@ -399,8 +402,8 @@
       document.getElementById('appScreen').classList.remove('hidden');
       document.getElementById('bottomNav').classList.remove('hidden');
 
-      const user = getCurrentUser();
-      document.getElementById('welcomeText').textContent = user + '님, 돈 갚아라';
+      const nick = getNickname() || getCurrentUser();
+      document.getElementById('welcomeText').textContent = nick + '님, 돈 갚아라';
 
       appData = loadData();
       renderBottomNav('home');

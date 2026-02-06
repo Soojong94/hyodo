@@ -4,6 +4,7 @@ const LAST_USER_KEY = 'hyodo_last_user'; // 마지막 로그인 이메일
 
 // ============ 전역 상태 ============
 let currentUserEmail = null;
+let currentUserNick = null;
 
 // ============ 인증 관리 ============
 
@@ -14,6 +15,7 @@ async function initAuth() {
   const session = await getSessionSupabase();
   if (session && session.user) {
     currentUserEmail = session.user.email;
+    currentUserNick = session.user.user_metadata?.nickname || session.user.email.split('@')[0];
     return true;
   }
   return false;
@@ -21,6 +23,10 @@ async function initAuth() {
 
 function getCurrentUser() {
   return currentUserEmail;
+}
+
+function getNickname() {
+  return currentUserNick;
 }
 
 function isAuthenticated() {
@@ -34,6 +40,7 @@ async function login(email, password) {
     const result = await loginSupabase(email, password);
     if (result.ok) {
       currentUserEmail = result.user.email;
+      currentUserNick = result.user.user_metadata?.nickname || email.split('@')[0];
       localStorage.setItem(LAST_USER_KEY, currentUserEmail);
       return { ok: true };
     }
@@ -44,18 +51,17 @@ async function login(email, password) {
   }
 }
 
-async function signup(email, password) {
-  if (!email || !password) return { ok: false, msg: '이메일과 비밀번호를 입력해주세요.' };
-  if (password.length < 6) return { ok: false, msg: '비밀번호는 6자 이상이어야 합니다.' }; // Supabase 기본 정책
+async function signup(email, password, nickname) {
+  if (!email || !password || !nickname) return { ok: false, msg: '모든 정보를 입력해주세요.' };
+  if (password.length < 6) return { ok: false, msg: '비밀번호는 6자 이상이어야 합니다.' }; 
   
   try {
-    const result = await signupSupabase(email, password);
+    const result = await signupSupabase(email, password, nickname);
     if (result.ok) {
-      // 자동 로그인 처리 안됨 (이메일 확인 필요할 수 있음) -> 바로 로그인 시도해보기
-      // Supabase 설정에서 'Confirm email'이 꺼져있다면 바로 로그인 가능
       const loginResult = await loginSupabase(email, password);
       if (loginResult.ok) {
         currentUserEmail = loginResult.user.email;
+        currentUserNick = nickname;
         localStorage.setItem(LAST_USER_KEY, currentUserEmail);
         return { ok: true };
       }
