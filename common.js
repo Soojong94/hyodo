@@ -38,13 +38,13 @@ function login(username, password) {
   if (!users[id]) return { ok: false, msg: '존재하지 않는 아이디입니다.' };
   if (users[id].password !== pw) return { ok: false, msg: '비밀번호가 틀렸습니다.' };
 
-  sessionStorage.setItem(AUTH_KEY, id);
+  localStorage.setItem(AUTH_KEY, id);
   addLoginLog(id, 'login');
   return { ok: true };
 }
 
 function getCurrentUser() {
-  return sessionStorage.getItem(AUTH_KEY);
+  return localStorage.getItem(AUTH_KEY);
 }
 
 function isAuthenticated() {
@@ -52,7 +52,7 @@ function isAuthenticated() {
 }
 
 function logout() {
-  sessionStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(AUTH_KEY);
   window.location.href = 'index.html';
 }
 
@@ -68,7 +68,6 @@ function requireAuth() {
 function addLoginLog(username, action) {
   const log = getLoginLog();
   log.push({ username, action, time: new Date().toISOString() });
-  if (log.length > 100) log.splice(0, log.length - 100);
   localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(log));
 }
 
