@@ -31,7 +31,10 @@ self.addEventListener('fetch', event => {
     fetch(event.request)
       .then(response => {
         const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        // GET 요청만 캐시하도록 조건 추가
+        if (event.request.method === 'GET') {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
         return response;
       })
       .catch(() => caches.match(event.request))
