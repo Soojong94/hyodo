@@ -179,11 +179,6 @@
       </div>
     </div>
 
-    <!-- 로그인 기록 -->
-    <div class="px-6 mt-8">
-      <h2 class="text-lg font-bold text-gray-400 mb-3">최근 접속 기록</h2>
-      <div id="loginLogList" class="space-y-1"></div>
-    </div>
   </div>
 
   <!-- 하단 네비게이션 -->
@@ -332,7 +327,6 @@
       renderBottomNav('home');
       updateDashboard();
       renderRecentHistory();
-      renderLoginLog();
 
       if (appData.totalAmount <= 0) {
         setTimeout(() => openSetupModal(), 300);
@@ -398,34 +392,6 @@
         `;
       }
       list.innerHTML = html;
-    }
-
-    // ============ 로그인 기록 ============
-    function renderLoginLog() {
-      const log = getLoginLog();
-      const recent = log.slice(-10).reverse();
-      const el = document.getElementById('loginLogList');
-
-      if (recent.length === 0) {
-        el.innerHTML = '<p class="text-gray-300 text-sm">기록 없음</p>';
-        return;
-      }
-
-      el.innerHTML = recent.map(item => {
-        const d = new Date(item.time);
-        const timeStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        const action = item.action === 'signup' ? '회원가입' : '로그인';
-        const color = item.action === 'signup' ? 'text-green-500' : 'text-blue-500';
-        return `
-          <div class="flex items-center justify-between py-2 border-b border-gray-100">
-            <div class="flex items-center gap-2">
-              <span class="${color} text-sm font-bold">${action}</span>
-              <span class="text-gray-600 text-sm font-semibold">${escapeHtml(item.username)}</span>
-            </div>
-            <span class="text-gray-400 text-xs">${timeStr}</span>
-          </div>
-        `;
-      }).join('');
     }
 
     // ============ 상환 입력 ============
