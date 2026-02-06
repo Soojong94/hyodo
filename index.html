@@ -177,8 +177,27 @@
           데이터 가져오기
         </button>
       </div>
+      <button onclick="openDeleteAccountModal()"
+        class="w-full text-red-400 text-sm font-semibold py-3 active:text-red-600 transition-all mt-2">
+        회원탈퇴
+      </button>
     </div>
 
+  </div>
+
+  <!-- ========== 회원탈퇴 확인 모달 ========== -->
+  <div id="deleteAccountModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeDeleteAccountModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-red-500 text-center mb-2">회원탈퇴</h3>
+      <p class="text-gray-500 text-center text-lg mb-6">탈퇴하면 모든 데이터가 삭제됩니다.<br>정말 탈퇴하시겠습니까?</p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteAccountModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">취소</button>
+        <button onclick="confirmDeleteAccount()"
+          class="flex-1 bg-red-500 text-white text-xl font-bold py-4 rounded-xl active:bg-red-700 transition-all">탈퇴</button>
+      </div>
+    </div>
   </div>
 
   <!-- 하단 네비게이션 -->
@@ -504,6 +523,11 @@
         alert('올바르지 않은 데이터 형식입니다.');
       }
     }
+
+    // ============ 회원탈퇴 ============
+    function openDeleteAccountModal() { document.getElementById('deleteAccountModal').classList.remove('hidden'); }
+    function closeDeleteAccountModal() { document.getElementById('deleteAccountModal').classList.add('hidden'); }
+    function confirmDeleteAccount() { deleteAccount(); }
 
     // ============ 초기화 ============
     if (isAuthenticated()) {

@@ -56,6 +56,17 @@ function logout() {
   window.location.href = 'index.html';
 }
 
+function deleteAccount() {
+  const user = getCurrentUser();
+  if (!user) return;
+  const users = getUsers();
+  delete users[user];
+  saveUsers(users);
+  localStorage.removeItem('hyodo_data_' + user);
+  localStorage.removeItem(AUTH_KEY);
+  window.location.href = 'index.html';
+}
+
 function requireAuth() {
   if (!isAuthenticated()) {
     window.location.href = 'index.html';
