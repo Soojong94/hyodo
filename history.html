@@ -19,8 +19,6 @@
     .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
     .fade-in { animation: fadeIn 0.25s ease-out; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
-    .history-item { animation: slideIn 0.3s ease-out; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -29,8 +27,6 @@
     <!-- 헤더 -->
     <header class="bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white px-6 pt-8 pb-6 rounded-b-3xl shadow-lg">
       <h1 class="text-2xl font-bold text-center mb-4">상환 내역</h1>
-
-      <!-- 요약 카드 -->
       <div class="flex gap-3">
         <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
           <p class="text-blue-200 text-sm">총 상환</p>
@@ -49,7 +45,7 @@
 
     <!-- 내역 리스트 -->
     <div class="px-6 mt-6">
-      <div id="historyList" class="space-y-4"></div>
+      <div id="historyList" class="space-y-3"></div>
 
       <div id="emptyState" class="text-center py-16 text-gray-400 hidden">
         <p class="text-6xl mb-4">📋</p>
@@ -81,13 +77,11 @@
 
   <script src="common.js"></script>
   <script>
-    // 변수 선언을 최상단에 배치 (TDZ 방지)
     let appData = null;
     let deleteTargetId = null;
 
-    // 인증 확인
     if (!requireAuth()) {
-      // requireAuth()가 index.html로 리다이렉트
+      // 리다이렉트
     } else {
       appData = loadData();
       renderBottomNav('history');
@@ -114,8 +108,6 @@
       }
 
       emptyState.classList.add('hidden');
-
-      // 최신순 정렬
       const sorted = [...appData.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
 
       // 월별 그룹핑
@@ -131,32 +123,30 @@
       for (const [month, items] of Object.entries(groups)) {
         const monthTotal = items.reduce((s, i) => s + i.amount, 0);
         html += `
-          <div class="fade-in">
-            <div class="flex items-center justify-between mb-3 px-1">
-              <span class="text-lg font-bold text-gray-600">${month}</span>
-              <span class="text-lg font-bold text-blue-600">${formatMoney(monthTotal)}</span>
+          <div class="mb-2">
+            <div class="flex items-center justify-between mb-2 px-1">
+              <span class="text-base font-bold text-gray-500">${month}</span>
+              <span class="text-base font-bold text-blue-600">${formatMoney(monthTotal)}</span>
             </div>
         `;
 
         items.forEach(item => {
           const d = new Date(item.date);
-          const dayStr = `${d.getMonth()+1}월 ${d.getDate()}일`;
+          const dayStr = `${d.getMonth()+1}/${d.getDate()}`;
           const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-          const memo = item.memo ? `<p class="text-gray-400 text-sm mt-1">${escapeHtml(item.memo)}</p>` : '';
+          const memo = item.memo ? `<span class="text-gray-400 text-sm ml-2">${escapeHtml(item.memo)}</span>` : '';
 
           html += `
-            <div class="history-item bg-white rounded-xl p-4 mb-2 shadow-sm border border-gray-100">
-              <div class="flex items-center justify-between">
-                <div>
-                  <span class="text-gray-600 text-base font-semibold">${dayStr}</span>
-                  <span class="text-gray-300 text-sm ml-2">${timeStr}</span>
-                  ${memo}
-                </div>
-                <div class="flex items-center gap-3 shrink-0 ml-4">
-                  <span class="text-base font-bold text-[#1e3a5f]">-${formatMoney(item.amount)}</span>
-                  <button onclick="openDeleteModal('${item.id}')"
-                    class="text-gray-300 active:text-red-500 text-2xl px-1 transition-colors">&times;</button>
-                </div>
+            <div class="bg-white rounded-xl p-4 mb-2 shadow-sm border border-gray-100 flex items-center justify-between">
+              <div class="min-w-0">
+                <span class="text-gray-500 text-base font-semibold">${dayStr}</span>
+                <span class="text-gray-300 text-xs ml-1">${timeStr}</span>
+                ${memo}
+              </div>
+              <div class="flex items-center gap-2 shrink-0 ml-3">
+                <span class="text-lg font-bold text-[#1e3a5f]">-${formatMoney(item.amount)}</span>
+                <button onclick="openDeleteModal('${item.id}')"
+                  class="text-gray-300 active:text-red-500 text-xl px-1 transition-colors">&times;</button>
               </div>
             </div>
           `;
@@ -168,7 +158,6 @@
       list.innerHTML = html;
     }
 
-    // ============ 삭제 ============
     function openDeleteModal(id) {
       deleteTargetId = id;
       const item = appData.payments.find(p => p.id === id);
