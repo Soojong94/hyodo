@@ -120,7 +120,15 @@ function formatMoney(num) {
 }
 
 function getPaidTotal(data) {
-  return data.payments.reduce((sum, p) => sum + p.amount, 0);
+  return data.payments.filter(p => !p.type || p.type === 'repayment').reduce((sum, p) => sum + p.amount, 0);
+}
+
+function getSpendTotal(data) {
+  return data.payments.filter(p => p.type === 'spend').reduce((sum, p) => sum + p.amount, 0);
+}
+
+function getEffectiveTotal(data) {
+  return data.totalAmount + getSpendTotal(data);
 }
 
 function escapeHtml(text) {

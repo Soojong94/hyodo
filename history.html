@@ -6,7 +6,11 @@
   <meta name="theme-color" content="#1e3a5f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="마이너스 통장">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
   <title>상환 내역 - 마이너스 통장</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -103,14 +107,17 @@
     }
 
     function updateSummary() {
-      const paid = getPaidTotal(appData);
-      const remaining = Math.max(0, appData.totalAmount - paid);
-      const progress = appData.totalAmount > 0 ? Math.min(100, (paid / appData.totalAmount) * 100) : 0;
+      const repaid = getPaidTotal(appData);
+      const spent = getSpendTotal(appData);
+      const effectiveTotal = getEffectiveTotal(appData);
+      const netRepaid = Math.max(0, repaid - spent);
+      const remaining = Math.max(0, effectiveTotal - repaid);
+      const progress = (netRepaid <= 0 || appData.totalAmount <= 0) ? 0 : Math.min(100, (netRepaid / appData.totalAmount) * 100);
 
       document.getElementById('welcomeText').textContent = '총 ' + appData.payments.length + '건';
       document.getElementById('summaryRemaining').textContent = formatMoney(remaining);
-      document.getElementById('summaryTotal').textContent = formatMoney(appData.totalAmount);
-      document.getElementById('summaryPaid').textContent = formatMoney(paid);
+      document.getElementById('summaryTotal').textContent = formatMoney(effectiveTotal);
+      document.getElementById('summaryPaid').textContent = formatMoney(netRepaid);
       document.getElementById('progressBar').style.width = progress + '%';
 
       if (progress >= 100) {
@@ -146,12 +153,16 @@
 
       let html = '';
       for (const [month, items] of Object.entries(groups)) {
-        const monthTotal = items.reduce((s, i) => s + i.amount, 0);
+        const monthRepay = items.filter(i => !i.type || i.type === 'repayment').reduce((s, i) => s + i.amount, 0);
+        const monthSpend = items.filter(i => i.type === 'spend').reduce((s, i) => s + i.amount, 0);
+        const monthSummary = monthSpend > 0
+          ? `<span class="text-blue-600">-${formatMoney(monthRepay)}</span> <span class="text-gray-300 mx-1">|</span> <span class="text-orange-500">+${formatMoney(monthSpend)}</span>`
+          : `<span class="text-blue-600">${formatMoney(monthRepay)}</span>`;
         html += `
           <div class="mb-2">
             <div class="flex items-center justify-between mb-2 px-1">
               <span class="text-base font-bold text-gray-500">${month}</span>
-              <span class="text-base font-bold text-blue-600">${formatMoney(monthTotal)}</span>
+              <span class="text-base font-bold">${monthSummary}</span>
             </div>
         `;
 
@@ -160,16 +171,22 @@
           const dayStr = `${d.getMonth()+1}/${d.getDate()}`;
           const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
           const memo = item.memo ? `<span class="text-gray-400 text-sm ml-2">${escapeHtml(item.memo)}</span>` : '';
+          const isSpend = item.type === 'spend';
+          const sign = isSpend ? '+' : '-';
+          const amountColor = isSpend ? 'text-orange-500' : 'text-[#1e3a5f]';
+          const typeLabel = isSpend
+            ? '<span class="text-xs bg-orange-100 text-orange-500 font-bold px-2 py-0.5 rounded-full ml-2">대출</span>'
+            : '<span class="text-xs bg-green-100 text-green-600 font-bold px-2 py-0.5 rounded-full ml-2">상환</span>';
 
           html += `
             <div class="bg-white rounded-xl p-4 mb-2 shadow-sm border border-gray-100 flex items-center justify-between">
               <div class="min-w-0">
                 <span class="text-gray-500 text-base font-semibold">${dayStr}</span>
                 <span class="text-gray-300 text-xs ml-1">${timeStr}</span>
-                ${memo}
+                ${typeLabel}${memo}
               </div>
               <div class="flex items-center gap-2 shrink-0 ml-3">
-                <span class="text-lg font-bold text-[#1e3a5f]">-${formatMoney(item.amount)}</span>
+                <span class="text-lg font-bold ${amountColor}">${sign}${formatMoney(item.amount)}</span>
                 <button onclick="openDeleteModal('${item.id}')"
                   class="text-gray-300 active:text-red-500 text-xl px-1 transition-colors">&times;</button>
               </div>

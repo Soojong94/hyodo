@@ -8,6 +8,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="마이너스 통장">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <meta property="og:title" content="마이너스 통장">
+  <meta property="og:description" content="간편한 상환 관리 앱">
+  <meta property="og:image" content="icon-512.png">
+  <meta name="description" content="간편한 상환 관리 앱 - 마이너스 통장">
   <title>마이너스 통장</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -139,12 +146,17 @@
       <p class="text-center text-blue-200 text-sm mt-1" id="progressText">0% 완료</p>
     </header>
 
-    <!-- 상환하기 버튼 -->
-    <div class="px-6 mt-6">
-      <button onclick="openPaymentModal()"
-        class="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-2xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all active:scale-95">
-        <span class="text-3xl">+</span>
-        <span>상환하기</span>
+    <!-- 상환 / 추가 지출 버튼 -->
+    <div class="px-6 mt-6 flex gap-3">
+      <button onclick="openPaymentModal('repayment')"
+        class="flex-1 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
+        <span class="text-2xl">-</span>
+        <span>상환</span>
+      </button>
+      <button onclick="openPaymentModal('spend')"
+        class="flex-1 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white text-xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
+        <span class="text-2xl">+</span>
+        <span>추가 대출</span>
       </button>
     </div>
 
@@ -208,7 +220,7 @@
     <div class="modal-overlay absolute inset-0" onclick="closePaymentModal()"></div>
     <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 fade-in max-w-lg mx-auto">
       <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
-      <h3 class="text-xl font-bold text-gray-700 text-center mb-2">상환 금액 입력</h3>
+      <h3 id="modalTitle" class="text-xl font-bold text-gray-700 text-center mb-2">상환 금액 입력</h3>
       <div class="bg-gray-50 rounded-2xl p-4 mb-4 text-center">
         <p id="inputDisplay" class="text-4xl font-black text-[#1e3a5f]">0원</p>
       </div>
@@ -236,7 +248,7 @@
         <button class="keypad-btn" onclick="pressKey('0')">0</button>
         <button class="keypad-btn text-orange-500 border-orange-200" onclick="pressKey('back')">←</button>
       </div>
-      <button onclick="confirmPayment()"
+      <button id="confirmPaymentBtn" onclick="confirmPayment()"
         class="w-full bg-green-500 active:bg-green-700 text-white text-2xl font-bold py-4 rounded-2xl transition-all active:scale-95">
         상환 완료
       </button>
@@ -281,6 +293,7 @@
   <script>
     let appData = null;
     let inputValue = '0';
+    let paymentMode = 'repayment';
 
     // ============ 로그인 / 회원가입 ============
     function showLogin() {
@@ -356,13 +369,16 @@
 
     // ============ 대시보드 ============
     function updateDashboard() {
-      const paid = getPaidTotal(appData);
-      const remaining = Math.max(0, appData.totalAmount - paid);
-      const progress = appData.totalAmount > 0 ? Math.min(100, (paid / appData.totalAmount) * 100) : 0;
+      const repaid = getPaidTotal(appData);
+      const spent = getSpendTotal(appData);
+      const effectiveTotal = getEffectiveTotal(appData);
+      const netRepaid = Math.max(0, repaid - spent);
+      const remaining = Math.max(0, effectiveTotal - repaid);
+      const progress = (netRepaid <= 0 || appData.totalAmount <= 0) ? 0 : Math.min(100, (netRepaid / appData.totalAmount) * 100);
 
       document.getElementById('remainingAmount').textContent = formatMoney(remaining);
-      document.getElementById('totalAmount').textContent = formatMoney(appData.totalAmount);
-      document.getElementById('paidAmount').textContent = formatMoney(paid);
+      document.getElementById('totalAmount').textContent = formatMoney(effectiveTotal);
+      document.getElementById('paidAmount').textContent = formatMoney(netRepaid);
       document.getElementById('progressBar').style.width = progress + '%';
 
       if (progress >= 100) {
@@ -394,13 +410,19 @@
         const d = new Date(item.date);
         const dayStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
         const memo = item.memo ? `<span class="text-gray-400 text-sm ml-2">${escapeHtml(item.memo)}</span>` : '';
+        const isSpend = item.type === 'spend';
+        const sign = isSpend ? '+' : '-';
+        const amountColor = isSpend ? 'text-orange-500' : 'text-[#1e3a5f]';
+        const typeLabel = isSpend
+          ? '<span class="text-xs bg-orange-100 text-orange-500 font-bold px-2 py-0.5 rounded-full ml-2">대출</span>'
+          : '<span class="text-xs bg-green-100 text-green-600 font-bold px-2 py-0.5 rounded-full ml-2">상환</span>';
         html += `
           <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
             <div>
               <span class="text-gray-500 text-base font-semibold">${dayStr}</span>
-              ${memo}
+              ${typeLabel}${memo}
             </div>
-            <span class="text-xl font-bold text-[#1e3a5f]">-${formatMoney(item.amount)}</span>
+            <span class="text-xl font-bold ${amountColor}">${sign}${formatMoney(item.amount)}</span>
           </div>
         `;
       });
@@ -415,13 +437,27 @@
       list.innerHTML = html;
     }
 
-    // ============ 상환 입력 ============
-    function openPaymentModal() {
-      if (appData.totalAmount <= 0) { openSetupModal(); return; }
+    // ============ 상환/지출 입력 ============
+    function openPaymentModal(mode) {
+      paymentMode = mode || 'repayment';
+      if (paymentMode === 'repayment' && appData.totalAmount <= 0) { openSetupModal(); return; }
       inputValue = '0';
       document.getElementById('memoInput').value = '';
       document.getElementById('dateInput').value = new Date().toISOString().slice(0, 10);
       updateInputDisplay();
+
+      const title = document.getElementById('modalTitle');
+      const confirmBtn = document.getElementById('confirmPaymentBtn');
+      if (paymentMode === 'spend') {
+        title.textContent = '추가 대출 금액 입력';
+        confirmBtn.textContent = '대출 등록';
+        confirmBtn.className = 'w-full bg-orange-500 active:bg-orange-700 text-white text-2xl font-bold py-4 rounded-2xl transition-all active:scale-95';
+      } else {
+        title.textContent = '상환 금액 입력';
+        confirmBtn.textContent = '상환 완료';
+        confirmBtn.className = 'w-full bg-green-500 active:bg-green-700 text-white text-2xl font-bold py-4 rounded-2xl transition-all active:scale-95';
+      }
+
       document.getElementById('paymentModal').classList.remove('hidden');
     }
     function closePaymentModal() { document.getElementById('paymentModal').classList.add('hidden'); }
@@ -448,17 +484,28 @@
     function confirmPayment() {
       const amount = parseInt(inputValue) || 0;
       if (amount <= 0) { alert('금액을 입력해주세요.'); return; }
-      const remaining = appData.totalAmount - getPaidTotal(appData);
-      if (amount > remaining) { alert('남은 금액보다 큰 금액은 입력할 수 없습니다.'); return; }
+
+      if (paymentMode === 'repayment') {
+        const remaining = getEffectiveTotal(appData) - getPaidTotal(appData);
+        if (amount > remaining) { alert('남은 금액보다 큰 금액은 입력할 수 없습니다.'); return; }
+      }
 
       const selectedDate = document.getElementById('dateInput').value;
-      const paymentDate = selectedDate ? new Date(selectedDate + 'T12:00:00').toISOString() : new Date().toISOString();
+      const now = new Date();
+      let paymentDate;
+      if (selectedDate) {
+        const [y, m, d] = selectedDate.split('-').map(Number);
+        paymentDate = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds()).toISOString();
+      } else {
+        paymentDate = now.toISOString();
+      }
 
       appData.payments.push({
         id: generateId(),
         date: paymentDate,
         amount: amount,
-        memo: document.getElementById('memoInput').value.trim()
+        memo: document.getElementById('memoInput').value.trim(),
+        type: paymentMode
       });
 
       saveData(appData);

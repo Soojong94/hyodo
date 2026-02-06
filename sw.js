@@ -1,10 +1,12 @@
-const CACHE_NAME = 'hyodo-v2';
+const CACHE_NAME = 'hyodo-v3';
 const ASSETS = [
   './',
   './index.html',
   './history.html',
   './common.js',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
