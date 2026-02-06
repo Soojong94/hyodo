@@ -26,21 +26,34 @@
 
     <!-- 헤더 -->
     <header class="bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white px-6 pt-8 pb-6 rounded-b-3xl shadow-lg">
-      <h1 class="text-2xl font-bold text-center mb-4">상환 내역</h1>
-      <div class="flex gap-3">
-        <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
-          <p class="text-blue-200 text-sm">총 상환</p>
-          <p class="text-2xl font-black" id="summaryPaid">0원</p>
+      <div class="text-center">
+        <h1 class="text-2xl font-bold">상환 내역</h1>
+        <p class="text-blue-200 text-base" id="welcomeText"></p>
+      </div>
+
+      <!-- 남은 금액 -->
+      <div class="mt-6 bg-white/15 rounded-2xl p-6 text-center">
+        <p class="text-blue-200 text-lg mb-1">남은 금액</p>
+        <p class="text-5xl font-black tracking-tight" id="summaryRemaining">0원</p>
+      </div>
+
+      <!-- 총금액 / 갚은 금액 -->
+      <div class="mt-4 flex gap-3">
+        <div class="flex-1 bg-white/10 rounded-xl p-3 text-center">
+          <p class="text-blue-200 text-sm">총 금액</p>
+          <p class="text-xl font-bold" id="summaryTotal">0원</p>
         </div>
-        <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
-          <p class="text-blue-200 text-sm">남은 금액</p>
-          <p class="text-2xl font-black" id="summaryRemaining">0원</p>
-        </div>
-        <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
-          <p class="text-blue-200 text-sm">총 건수</p>
-          <p class="text-2xl font-black" id="summaryCount">0건</p>
+        <div class="flex-1 bg-white/10 rounded-xl p-3 text-center">
+          <p class="text-blue-200 text-sm">갚은 금액</p>
+          <p class="text-xl font-bold" id="summaryPaid">0원</p>
         </div>
       </div>
+
+      <!-- 진행률 바 -->
+      <div class="mt-4 bg-white/20 rounded-full h-4 overflow-hidden">
+        <div class="bg-green-400 h-full rounded-full transition-all duration-500" id="progressBar" style="width:0%"></div>
+      </div>
+      <p class="text-center text-blue-200 text-sm mt-1" id="progressText">0% 완료</p>
     </header>
 
     <!-- 내역 리스트 -->
@@ -92,9 +105,21 @@
     function updateSummary() {
       const paid = getPaidTotal(appData);
       const remaining = Math.max(0, appData.totalAmount - paid);
-      document.getElementById('summaryPaid').textContent = formatMoney(paid);
+      const progress = appData.totalAmount > 0 ? Math.min(100, (paid / appData.totalAmount) * 100) : 0;
+
+      document.getElementById('welcomeText').textContent = '총 ' + appData.payments.length + '건';
       document.getElementById('summaryRemaining').textContent = formatMoney(remaining);
-      document.getElementById('summaryCount').textContent = appData.payments.length + '건';
+      document.getElementById('summaryTotal').textContent = formatMoney(appData.totalAmount);
+      document.getElementById('summaryPaid').textContent = formatMoney(paid);
+      document.getElementById('progressBar').style.width = progress + '%';
+
+      if (progress >= 100) {
+        document.getElementById('progressBar').className = 'bg-yellow-400 h-full rounded-full transition-all duration-500';
+        document.getElementById('progressText').textContent = '모두 갚았습니다!';
+      } else {
+        document.getElementById('progressBar').className = 'bg-green-400 h-full rounded-full transition-all duration-500';
+        document.getElementById('progressText').textContent = Math.round(progress) + '% 완료';
+      }
     }
 
     function renderHistory() {
