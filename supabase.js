@@ -170,7 +170,14 @@ async function deleteAccountSupabase() {
   if (!user) return;
 
   // profiles 테이블 삭제 시 DB 트리거에 의해 auth.users 계정도 함께 삭제됩니다.
-  await sb.from('profiles').delete().eq('id', user.id);
+  const { error } = await sb.from('profiles').delete().eq('id', user.id);
+
+  if (error) {
+    console.error('프로필 삭제 중 오류 발생:', error); // <-- 오류 로깅 추가
+    // 오류 발생 시는 로그아웃하지 않음 (다시 시도할 수 있도록)
+    return;
+  }
+  
   // profiles이 삭제되면 payments도 ON DELETE CASCADE에 의해 삭제됩니다.
   
   await sb.auth.signOut();
