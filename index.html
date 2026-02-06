@@ -39,13 +39,21 @@
       width:100%; color:#1e3a5f; background:#fff; outline:none;
     }
     .setup-input:focus { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,0.2); }
+    .auth-input {
+      width:100%; text-align:center; font-size:1.25rem; font-weight:700;
+      padding:1rem; border:2px solid #e2e8f0; border-radius:1rem;
+      outline:none; transition:all 0.2s; background:#fff; color:#1e3a5f;
+    }
+    .auth-input:focus { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,0.15); }
+    .auth-input::placeholder { color:#cbd5e1; font-weight:400; }
   </style>
 </head>
 <body class="min-h-screen">
 
-  <!-- ==================== 로그인 화면 ==================== -->
-  <div id="loginScreen" class="min-h-screen flex items-center justify-center px-6">
+  <!-- ==================== 로그인/회원가입 화면 ==================== -->
+  <div id="authScreen" class="min-h-screen flex items-center justify-center px-6">
     <div class="w-full max-w-sm text-center fade-in">
+      <!-- 로고 -->
       <div class="mb-8">
         <div class="w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] rounded-3xl mx-auto flex items-center justify-center shadow-lg mb-6">
           <span class="text-5xl">💰</span>
@@ -54,22 +62,39 @@
         <p class="text-gray-400 mt-2 text-lg">돈 갚아라</p>
       </div>
 
-      <div class="space-y-4">
-        <input
-          id="loginPassword"
-          type="password"
-          inputmode="numeric"
-          placeholder="비밀번호 입력"
-          class="w-full text-center text-2xl font-bold p-4 border-3 border-gray-200 rounded-2xl outline-none focus:border-[#2563eb] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] transition-all tracking-[0.5em]"
-          onkeydown="if(event.key==='Enter') doLogin()"
-        >
-        <button
-          onclick="doLogin()"
-          class="w-full bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-2xl active:bg-[#152d4a] transition-all active:scale-95"
-        >
-          들어가기
+      <!-- 로그인 폼 -->
+      <div id="loginForm" class="space-y-3">
+        <input id="loginId" type="text" placeholder="아이디" class="auth-input"
+          onkeydown="if(event.key==='Enter') document.getElementById('loginPw').focus()">
+        <input id="loginPw" type="password" placeholder="비밀번호" class="auth-input"
+          onkeydown="if(event.key==='Enter') doLogin()">
+        <button onclick="doLogin()"
+          class="w-full bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-2xl active:bg-[#152d4a] transition-all active:scale-95">
+          로그인
         </button>
-        <p id="loginError" class="text-red-500 font-bold text-lg hidden">비밀번호가 틀렸습니다</p>
+        <p id="loginError" class="text-red-500 font-bold text-base hidden"></p>
+        <p class="text-gray-400 text-base mt-4">
+          계정이 없으신가요?
+          <button onclick="showSignup()" class="text-blue-500 font-bold active:text-blue-700 ml-1">회원가입</button>
+        </p>
+      </div>
+
+      <!-- 회원가입 폼 -->
+      <div id="signupForm" class="space-y-3 hidden">
+        <input id="signupId" type="text" placeholder="아이디 (2자 이상)" class="auth-input"
+          onkeydown="if(event.key==='Enter') document.getElementById('signupPw').focus()">
+        <input id="signupPw" type="password" placeholder="비밀번호 (4자 이상)" class="auth-input"
+          onkeydown="if(event.key==='Enter') doSignup()">
+        <button onclick="doSignup()"
+          class="w-full bg-green-500 text-white text-xl font-bold py-4 rounded-2xl active:bg-green-700 transition-all active:scale-95">
+          가입하기
+        </button>
+        <p id="signupError" class="text-red-500 font-bold text-base hidden"></p>
+        <p id="signupSuccess" class="text-green-600 font-bold text-base hidden"></p>
+        <p class="text-gray-400 text-base mt-4">
+          이미 계정이 있으신가요?
+          <button onclick="showLogin()" class="text-blue-500 font-bold active:text-blue-700 ml-1">로그인</button>
+        </p>
       </div>
     </div>
   </div>
@@ -82,7 +107,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold">마이너스 통장</h1>
-          <p class="text-blue-200 text-base">돈 갚아라</p>
+          <p class="text-blue-200 text-base" id="welcomeText">돈 갚아라</p>
         </div>
         <button onclick="doLogout()" class="text-blue-200 active:text-white text-sm bg-white/10 px-3 py-2 rounded-xl transition-colors">
           로그아웃
@@ -116,10 +141,8 @@
 
     <!-- 상환하기 버튼 -->
     <div class="px-6 mt-6">
-      <button
-        onclick="openPaymentModal()"
-        class="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-2xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all active:scale-95"
-      >
+      <button onclick="openPaymentModal()"
+        class="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-2xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all active:scale-95">
         <span class="text-3xl">+</span>
         <span>상환하기</span>
       </button>
@@ -131,9 +154,7 @@
         <h2 class="text-xl font-bold text-gray-700">최근 내역</h2>
         <a href="history.html" class="text-blue-500 font-bold text-base active:text-blue-700">전체보기 →</a>
       </div>
-
       <div id="recentList" class="space-y-2"></div>
-
       <div id="emptyState" class="text-center py-10 text-gray-400">
         <p class="text-5xl mb-3">📋</p>
         <p class="text-lg">아직 상환 내역이 없습니다</p>
@@ -142,26 +163,26 @@
 
     <!-- 설정 버튼들 -->
     <div class="px-6 mt-8 space-y-3">
-      <button
-        onclick="openSetupModal()"
-        class="w-full bg-white text-gray-600 text-lg font-semibold py-4 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all"
-      >
+      <button onclick="openSetupModal()"
+        class="w-full bg-white text-gray-600 text-lg font-semibold py-4 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all">
         총 금액 설정
       </button>
       <div class="flex gap-3">
-        <button
-          onclick="exportData()"
-          class="flex-1 bg-white text-gray-500 text-base font-semibold py-3 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all"
-        >
+        <button onclick="exportData()"
+          class="flex-1 bg-white text-gray-500 text-base font-semibold py-3 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all">
           데이터 내보내기
         </button>
-        <button
-          onclick="openImportModal()"
-          class="flex-1 bg-white text-gray-500 text-base font-semibold py-3 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all"
-        >
+        <button onclick="openImportModal()"
+          class="flex-1 bg-white text-gray-500 text-base font-semibold py-3 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all">
           데이터 가져오기
         </button>
       </div>
+    </div>
+
+    <!-- 로그인 기록 -->
+    <div class="px-6 mt-8">
+      <h2 class="text-lg font-bold text-gray-400 mb-3">최근 접속 기록</h2>
+      <div id="loginLogList" class="space-y-1"></div>
     </div>
   </div>
 
@@ -242,34 +263,77 @@
 
   <script src="common.js"></script>
   <script>
-    let appData = loadData();
+    let appData = null;
     let inputValue = '0';
 
-    // ============ 로그인 ============
+    // ============ 로그인 / 회원가입 ============
+    function showLogin() {
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('signupForm').classList.add('hidden');
+      document.getElementById('loginId').focus();
+    }
+
+    function showSignup() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('signupForm').classList.remove('hidden');
+      document.getElementById('signupId').focus();
+    }
+
+    function showAuthError(elemId, msg) {
+      const el = document.getElementById(elemId);
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+
     function doLogin() {
-      const pw = document.getElementById('loginPassword').value;
-      if (authenticate(pw)) {
+      const id = document.getElementById('loginId').value;
+      const pw = document.getElementById('loginPw').value;
+      const result = login(id, pw);
+      if (result.ok) {
         showApp();
       } else {
-        const err = document.getElementById('loginError');
-        err.classList.remove('hidden');
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginPassword').focus();
-        setTimeout(() => err.classList.add('hidden'), 2000);
+        showAuthError('loginError', result.msg);
       }
     }
 
-    function doLogout() {
-      logout();
+    function doSignup() {
+      const id = document.getElementById('signupId').value;
+      const pw = document.getElementById('signupPw').value;
+      const result = signup(id, pw);
+      if (result.ok) {
+        const el = document.getElementById('signupSuccess');
+        el.textContent = '가입 완료! 로그인해주세요.';
+        el.classList.remove('hidden');
+        setTimeout(() => {
+          el.classList.add('hidden');
+          document.getElementById('loginId').value = id;
+          document.getElementById('loginPw').value = '';
+          showLogin();
+          document.getElementById('loginPw').focus();
+        }, 1200);
+      } else {
+        showAuthError('signupError', result.msg);
+      }
     }
 
+    function doLogout() { logout(); }
+
+    // ============ 앱 표시 ============
     function showApp() {
-      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('appScreen').classList.remove('hidden');
       document.getElementById('bottomNav').classList.remove('hidden');
+
+      const user = getCurrentUser();
+      document.getElementById('welcomeText').textContent = user + '님, 돈 갚아라';
+
+      appData = loadData();
       renderBottomNav('home');
       updateDashboard();
       renderRecentHistory();
+      renderLoginLog();
+
       if (appData.totalAmount <= 0) {
         setTimeout(() => openSetupModal(), 300);
       }
@@ -333,8 +397,35 @@
           </a>
         `;
       }
-
       list.innerHTML = html;
+    }
+
+    // ============ 로그인 기록 ============
+    function renderLoginLog() {
+      const log = getLoginLog();
+      const recent = log.slice(-10).reverse();
+      const el = document.getElementById('loginLogList');
+
+      if (recent.length === 0) {
+        el.innerHTML = '<p class="text-gray-300 text-sm">기록 없음</p>';
+        return;
+      }
+
+      el.innerHTML = recent.map(item => {
+        const d = new Date(item.time);
+        const timeStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const action = item.action === 'signup' ? '회원가입' : '로그인';
+        const color = item.action === 'signup' ? 'text-green-500' : 'text-blue-500';
+        return `
+          <div class="flex items-center justify-between py-2 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+              <span class="${color} text-sm font-bold">${action}</span>
+              <span class="text-gray-600 text-sm font-semibold">${escapeHtml(item.username)}</span>
+            </div>
+            <span class="text-gray-400 text-xs">${timeStr}</span>
+          </div>
+        `;
+      }).join('');
     }
 
     // ============ 상환 입력 ============
@@ -404,7 +495,7 @@
 
     // ============ 데이터 내보내기/가져오기 ============
     function exportData() {
-      const text = JSON.stringify({ version: 1, exportDate: new Date().toISOString(), data: appData }, null, 2);
+      const text = JSON.stringify({ version: 1, exportDate: new Date().toISOString(), user: getCurrentUser(), data: appData }, null, 2);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
           alert('데이터가 클립보드에 복사되었습니다.\n메모장이나 메시지에 붙여넣기 하여 보관하세요.');
@@ -418,7 +509,7 @@
       const blob = new Blob([text], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `마이너스통장_백업_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `마이너스통장_백업_${getCurrentUser()}_${new Date().toISOString().slice(0,10)}.json`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
     }
@@ -452,8 +543,8 @@
     if (isAuthenticated()) {
       showApp();
     } else {
-      document.getElementById('loginScreen').classList.remove('hidden');
-      setTimeout(() => document.getElementById('loginPassword').focus(), 300);
+      document.getElementById('authScreen').classList.remove('hidden');
+      setTimeout(() => document.getElementById('loginId').focus(), 300);
     }
   </script>
 </body>

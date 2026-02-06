@@ -1,23 +1,54 @@
-// ============================================
-// 비밀번호 설정 (여기서 변경하세요!)
-// ============================================
-const APP_PASSWORD = '1234';
-
 // ============ 스토리지 키 ============
-const STORAGE_KEY = 'hyodo_data';
+const USERS_KEY = 'hyodo_users';
 const AUTH_KEY = 'hyodo_auth';
+const LOGIN_LOG_KEY = 'hyodo_login_log';
 
-// ============ 인증 ============
-function isAuthenticated() {
-  return sessionStorage.getItem(AUTH_KEY) === 'true';
+// ============ 사용자 관리 ============
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
+  catch { return {}; }
 }
 
-function authenticate(password) {
-  if (password === APP_PASSWORD) {
-    sessionStorage.setItem(AUTH_KEY, 'true');
-    return true;
-  }
-  return false;
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function signup(username, password) {
+  const id = username.trim();
+  const pw = password.trim();
+  if (!id || !pw) return { ok: false, msg: '아이디와 비밀번호를 입력해주세요.' };
+  if (id.length < 2) return { ok: false, msg: '아이디는 2자 이상이어야 합니다.' };
+  if (pw.length < 4) return { ok: false, msg: '비밀번호는 4자 이상이어야 합니다.' };
+
+  const users = getUsers();
+  if (users[id]) return { ok: false, msg: '이미 존재하는 아이디입니다.' };
+
+  users[id] = { password: pw, createdAt: new Date().toISOString() };
+  saveUsers(users);
+  addLoginLog(id, 'signup');
+  return { ok: true };
+}
+
+function login(username, password) {
+  const id = username.trim();
+  const pw = password.trim();
+  if (!id || !pw) return { ok: false, msg: '아이디와 비밀번호를 입력해주세요.' };
+
+  const users = getUsers();
+  if (!users[id]) return { ok: false, msg: '존재하지 않는 아이디입니다.' };
+  if (users[id].password !== pw) return { ok: false, msg: '비밀번호가 틀렸습니다.' };
+
+  sessionStorage.setItem(AUTH_KEY, id);
+  addLoginLog(id, 'login');
+  return { ok: true };
+}
+
+function getCurrentUser() {
+  return sessionStorage.getItem(AUTH_KEY);
+}
+
+function isAuthenticated() {
+  return !!getCurrentUser();
 }
 
 function logout() {
@@ -33,14 +64,32 @@ function requireAuth() {
   return true;
 }
 
-// ============ 데이터 관리 ============
+// ============ 로그인 기록 ============
+function addLoginLog(username, action) {
+  const log = getLoginLog();
+  log.push({ username, action, time: new Date().toISOString() });
+  if (log.length > 100) log.splice(0, log.length - 100);
+  localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(log));
+}
+
+function getLoginLog() {
+  try { return JSON.parse(localStorage.getItem(LOGIN_LOG_KEY)) || []; }
+  catch { return []; }
+}
+
+// ============ 데이터 관리 (유저별) ============
+function getStorageKey() {
+  const user = getCurrentUser();
+  return user ? 'hyodo_data_' + user : 'hyodo_data';
+}
+
 function getDefaultData() {
   return { totalAmount: 0, payments: [] };
 }
 
 function loadData() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey());
     if (!raw) return getDefaultData();
     const data = JSON.parse(raw);
     if (!Array.isArray(data.payments)) data.payments = [];
@@ -52,7 +101,7 @@ function loadData() {
 }
 
 function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(getStorageKey(), JSON.stringify(data));
 }
 
 // ============ 유틸리티 ============
@@ -74,14 +123,12 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-// ============ 하단 네비게이션 렌더링 ============
+// ============ 하단 네비게이션 ============
 function renderBottomNav(activePage) {
   const nav = document.getElementById('bottomNav');
   if (!nav) return;
-
   const homeActive = activePage === 'home';
   const historyActive = activePage === 'history';
-
   nav.innerHTML = `
     <a href="index.html" class="flex-1 flex flex-col items-center gap-1 py-3 ${homeActive ? 'text-[#1e3a5f]' : 'text-gray-400'}">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

@@ -81,17 +81,14 @@
 
   <script src="common.js"></script>
   <script>
-    // 인증 확인
-    if (!requireAuth()) {
-      // requireAuth()가 리다이렉트 처리
-    } else {
-      init();
-    }
-
-    let appData;
+    // 변수 선언을 최상단에 배치 (TDZ 방지)
+    let appData = null;
     let deleteTargetId = null;
 
-    function init() {
+    // 인증 확인
+    if (!requireAuth()) {
+      // requireAuth()가 index.html로 리다이렉트
+    } else {
       appData = loadData();
       renderBottomNav('history');
       updateSummary();
