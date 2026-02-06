@@ -218,8 +218,12 @@
         <button class="quick-btn" onclick="addQuickAmount(100000)">+10만</button>
         <button class="quick-btn" onclick="addQuickAmount(500000)">+50만</button>
       </div>
-      <input id="memoInput" type="text" placeholder="메모 (선택사항)"
-        class="w-full text-lg p-3 border-2 border-gray-200 rounded-xl mb-4 outline-none focus:border-blue-400">
+      <div class="flex gap-2 mb-4">
+        <input id="dateInput" type="date"
+          class="flex-1 text-base p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-blue-400 text-[#1e3a5f] font-semibold">
+        <input id="memoInput" type="text" placeholder="메모 (선택)"
+          class="flex-1 text-base p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-blue-400">
+      </div>
       <div class="grid grid-cols-3 gap-2 mb-4">
         <button class="keypad-btn" onclick="pressKey('1')">1</button>
         <button class="keypad-btn" onclick="pressKey('2')">2</button>
@@ -418,6 +422,7 @@
       if (appData.totalAmount <= 0) { openSetupModal(); return; }
       inputValue = '0';
       document.getElementById('memoInput').value = '';
+      document.getElementById('dateInput').value = new Date().toISOString().slice(0, 10);
       updateInputDisplay();
       document.getElementById('paymentModal').classList.remove('hidden');
     }
@@ -448,9 +453,12 @@
       const remaining = appData.totalAmount - getPaidTotal(appData);
       if (amount > remaining) { alert('남은 금액보다 큰 금액은 입력할 수 없습니다.'); return; }
 
+      const selectedDate = document.getElementById('dateInput').value;
+      const paymentDate = selectedDate ? new Date(selectedDate + 'T12:00:00').toISOString() : new Date().toISOString();
+
       appData.payments.push({
         id: generateId(),
-        date: new Date().toISOString(),
+        date: paymentDate,
         amount: amount,
         memo: document.getElementById('memoInput').value.trim()
       });
