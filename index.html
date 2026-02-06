@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1e3a5f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="마이너스 통장">
+  <link rel="manifest" href="manifest.json">
+  <title>마이너스 통장</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+    * { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { background: #f0f4f8; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .fade-in { animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    .keypad-btn {
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.75rem; font-weight:700; border-radius:1rem;
+      background:#fff; color:#1e3a5f; border:2px solid #e2e8f0;
+      transition:all 0.1s; min-height:4rem; cursor:pointer;
+    }
+    .keypad-btn:active { background:#e2e8f0; transform:scale(0.95); }
+    .quick-btn {
+      background:#e8f0fe; color:#1e3a5f; font-weight:700; font-size:1.2rem;
+      padding:0.75rem 1rem; border-radius:1rem; border:2px solid #bdd0ec;
+      cursor:pointer; transition:all 0.1s;
+    }
+    .quick-btn:active { background:#bdd0ec; transform:scale(0.95); }
+    .setup-input {
+      font-size:2rem; font-weight:900; text-align:center;
+      border:3px solid #1e3a5f; border-radius:1rem; padding:1rem;
+      width:100%; color:#1e3a5f; background:#fff; outline:none;
+    }
+    .setup-input:focus { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,0.2); }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- ==================== 로그인 화면 ==================== -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center px-6">
+    <div class="w-full max-w-sm text-center fade-in">
+      <div class="mb-8">
+        <div class="w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] rounded-3xl mx-auto flex items-center justify-center shadow-lg mb-6">
+          <span class="text-5xl">💰</span>
+        </div>
+        <h1 class="text-3xl font-black text-[#1e3a5f]">마이너스 통장</h1>
+        <p class="text-gray-400 mt-2 text-lg">돈 갚아라</p>
+      </div>
+
+      <div class="space-y-4">
+        <input
+          id="loginPassword"
+          type="password"
+          inputmode="numeric"
+          placeholder="비밀번호 입력"
+          class="w-full text-center text-2xl font-bold p-4 border-3 border-gray-200 rounded-2xl outline-none focus:border-[#2563eb] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] transition-all tracking-[0.5em]"
+          onkeydown="if(event.key==='Enter') doLogin()"
+        >
+        <button
+          onclick="doLogin()"
+          class="w-full bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-2xl active:bg-[#152d4a] transition-all active:scale-95"
+        >
+          들어가기
+        </button>
+        <p id="loginError" class="text-red-500 font-bold text-lg hidden">비밀번호가 틀렸습니다</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 메인 앱 ==================== -->
+  <div id="appScreen" class="hidden max-w-lg mx-auto pb-24">
+
+    <!-- 헤더 -->
+    <header class="bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white px-6 pt-8 pb-6 rounded-b-3xl shadow-lg">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold">마이너스 통장</h1>
+          <p class="text-blue-200 text-base">돈 갚아라</p>
+        </div>
+        <button onclick="doLogout()" class="text-blue-200 active:text-white text-sm bg-white/10 px-3 py-2 rounded-xl transition-colors">
+          로그아웃
+        </button>
+      </div>
+
+      <!-- 남은 금액 -->
+      <div class="mt-6 bg-white/15 rounded-2xl p-6 text-center">
+        <p class="text-blue-200 text-lg mb-1">남은 금액</p>
+        <p class="text-5xl font-black tracking-tight" id="remainingAmount">0원</p>
+      </div>
+
+      <!-- 총금액 / 갚은 금액 -->
+      <div class="mt-4 flex gap-3">
+        <div class="flex-1 bg-white/10 rounded-xl p-3 text-center">
+          <p class="text-blue-200 text-sm">총 금액</p>
+          <p class="text-xl font-bold" id="totalAmount">0원</p>
+        </div>
+        <div class="flex-1 bg-white/10 rounded-xl p-3 text-center">
+          <p class="text-blue-200 text-sm">갚은 금액</p>
+          <p class="text-xl font-bold" id="paidAmount">0원</p>
+        </div>
+      </div>
+
+      <!-- 진행률 바 -->
+      <div class="mt-4 bg-white/20 rounded-full h-4 overflow-hidden">
+        <div class="bg-green-400 h-full rounded-full transition-all duration-500" id="progressBar" style="width:0%"></div>
+      </div>
+      <p class="text-center text-blue-200 text-sm mt-1" id="progressText">0% 완료</p>
+    </header>
+
+    <!-- 상환하기 버튼 -->
+    <div class="px-6 mt-6">
+      <button
+        onclick="openPaymentModal()"
+        class="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-2xl font-bold py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all active:scale-95"
+      >
+        <span class="text-3xl">+</span>
+        <span>상환하기</span>
+      </button>
+    </div>
+
+    <!-- 최근 내역 미리보기 -->
+    <div class="px-6 mt-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-700">최근 내역</h2>
+        <a href="history.html" class="text-blue-500 font-bold text-base active:text-blue-700">전체보기 →</a>
+      </div>
+
+      <div id="recentList" class="space-y-2"></div>
+
+      <div id="emptyState" class="text-center py-10 text-gray-400">
+        <p class="text-5xl mb-3">📋</p>
+        <p class="text-lg">아직 상환 내역이 없습니다</p>
+      </div>
+    </div>
+
+    <!-- 설정 버튼들 -->
+    <div class="px-6 mt-8 space-y-3">
+      <button
+        onclick="openSetupModal()"
+        class="w-full bg-white text-gray-600 text-lg font-semibold py-4 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all"
+      >
+        총 금액 설정
+      </button>
+      <div class="flex gap-3">
+        <button
+          onclick="exportData()"
+          class="flex-1 bg-white text-gray-500 text-base font-semibold py-3 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all"
+        >
+          데이터 내보내기
+        </button>
+        <button
+          onclick="openImportModal()"
+          class="flex-1 bg-white text-gray-500 text-base font-semibold py-3 rounded-xl border-2 border-gray-200 active:bg-gray-100 transition-all"
+        >
+          데이터 가져오기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 네비게이션 -->
+  <nav id="bottomNav" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex max-w-lg mx-auto shadow-[0_-2px_10px_rgba(0,0,0,0.05)]"></nav>
+
+  <!-- ========== 상환 입력 모달 ========== -->
+  <div id="paymentModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closePaymentModal()"></div>
+    <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 fade-in max-w-lg mx-auto">
+      <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+      <h3 class="text-xl font-bold text-gray-700 text-center mb-2">상환 금액 입력</h3>
+      <div class="bg-gray-50 rounded-2xl p-4 mb-4 text-center">
+        <p id="inputDisplay" class="text-4xl font-black text-[#1e3a5f]">0원</p>
+      </div>
+      <div class="grid grid-cols-4 gap-2 mb-4">
+        <button class="quick-btn" onclick="addQuickAmount(10000)">+1만</button>
+        <button class="quick-btn" onclick="addQuickAmount(50000)">+5만</button>
+        <button class="quick-btn" onclick="addQuickAmount(100000)">+10만</button>
+        <button class="quick-btn" onclick="addQuickAmount(500000)">+50만</button>
+      </div>
+      <input id="memoInput" type="text" placeholder="메모 (선택사항)"
+        class="w-full text-lg p-3 border-2 border-gray-200 rounded-xl mb-4 outline-none focus:border-blue-400">
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button class="keypad-btn" onclick="pressKey('1')">1</button>
+        <button class="keypad-btn" onclick="pressKey('2')">2</button>
+        <button class="keypad-btn" onclick="pressKey('3')">3</button>
+        <button class="keypad-btn" onclick="pressKey('4')">4</button>
+        <button class="keypad-btn" onclick="pressKey('5')">5</button>
+        <button class="keypad-btn" onclick="pressKey('6')">6</button>
+        <button class="keypad-btn" onclick="pressKey('7')">7</button>
+        <button class="keypad-btn" onclick="pressKey('8')">8</button>
+        <button class="keypad-btn" onclick="pressKey('9')">9</button>
+        <button class="keypad-btn text-red-500 border-red-200" onclick="pressKey('clear')">C</button>
+        <button class="keypad-btn" onclick="pressKey('0')">0</button>
+        <button class="keypad-btn text-orange-500 border-orange-200" onclick="pressKey('back')">←</button>
+      </div>
+      <button onclick="confirmPayment()"
+        class="w-full bg-green-500 active:bg-green-700 text-white text-2xl font-bold py-4 rounded-2xl transition-all active:scale-95">
+        상환 완료
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== 총금액 설정 모달 ========== -->
+  <div id="setupModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeSetupModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">총 금액 설정</h3>
+      <p class="text-gray-400 text-center mb-6">갚아야 할 전체 금액을 입력하세요</p>
+      <input id="setupInput" type="number" inputmode="numeric" placeholder="금액 입력" class="setup-input mb-6">
+      <div class="flex gap-3">
+        <button onclick="closeSetupModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">취소</button>
+        <button onclick="confirmSetup()"
+          class="flex-1 bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-xl active:bg-[#152d4a] transition-all">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 데이터 가져오기 모달 ========== -->
+  <div id="importModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeImportModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">데이터 가져오기</h3>
+      <p class="text-gray-400 text-center mb-4">내보낸 데이터를 아래에 붙여넣으세요</p>
+      <textarea id="importTextarea" rows="6"
+        class="w-full text-base p-4 border-2 border-gray-200 rounded-xl mb-4 outline-none focus:border-blue-400 resize-none"
+        placeholder="데이터를 여기에 붙여넣기..."></textarea>
+      <div class="flex gap-3">
+        <button onclick="closeImportModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">취소</button>
+        <button onclick="confirmImport()"
+          class="flex-1 bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-xl active:bg-[#152d4a] transition-all">가져오기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    let appData = loadData();
+    let inputValue = '0';
+
+    // ============ 로그인 ============
+    function doLogin() {
+      const pw = document.getElementById('loginPassword').value;
+      if (authenticate(pw)) {
+        showApp();
+      } else {
+        const err = document.getElementById('loginError');
+        err.classList.remove('hidden');
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginPassword').focus();
+        setTimeout(() => err.classList.add('hidden'), 2000);
+      }
+    }
+
+    function doLogout() {
+      logout();
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appScreen').classList.remove('hidden');
+      document.getElementById('bottomNav').classList.remove('hidden');
+      renderBottomNav('home');
+      updateDashboard();
+      renderRecentHistory();
+      if (appData.totalAmount <= 0) {
+        setTimeout(() => openSetupModal(), 300);
+      }
+    }
+
+    // ============ 대시보드 ============
+    function updateDashboard() {
+      const paid = getPaidTotal(appData);
+      const remaining = Math.max(0, appData.totalAmount - paid);
+      const progress = appData.totalAmount > 0 ? Math.min(100, (paid / appData.totalAmount) * 100) : 0;
+
+      document.getElementById('remainingAmount').textContent = formatMoney(remaining);
+      document.getElementById('totalAmount').textContent = formatMoney(appData.totalAmount);
+      document.getElementById('paidAmount').textContent = formatMoney(paid);
+      document.getElementById('progressBar').style.width = progress + '%';
+
+      if (progress >= 100) {
+        document.getElementById('progressBar').className = 'bg-yellow-400 h-full rounded-full transition-all duration-500';
+        document.getElementById('progressText').textContent = '모두 갚았습니다!';
+      } else {
+        document.getElementById('progressBar').className = 'bg-green-400 h-full rounded-full transition-all duration-500';
+        document.getElementById('progressText').textContent = Math.round(progress) + '% 완료';
+      }
+    }
+
+    // ============ 최근 내역 (최대 5개) ============
+    function renderRecentHistory() {
+      const list = document.getElementById('recentList');
+      const emptyState = document.getElementById('emptyState');
+
+      if (appData.payments.length === 0) {
+        list.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      const sorted = [...appData.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const recent = sorted.slice(0, 5);
+
+      let html = '';
+      recent.forEach(item => {
+        const d = new Date(item.date);
+        const dayStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
+        const memo = item.memo ? `<span class="text-gray-400 text-sm ml-2">${escapeHtml(item.memo)}</span>` : '';
+        html += `
+          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <span class="text-gray-500 text-base font-semibold">${dayStr}</span>
+              ${memo}
+            </div>
+            <span class="text-xl font-bold text-[#1e3a5f]">-${formatMoney(item.amount)}</span>
+          </div>
+        `;
+      });
+
+      if (appData.payments.length > 5) {
+        html += `
+          <a href="history.html" class="block text-center text-blue-500 font-bold text-base py-3 active:text-blue-700">
+            +${appData.payments.length - 5}건 더보기
+          </a>
+        `;
+      }
+
+      list.innerHTML = html;
+    }
+
+    // ============ 상환 입력 ============
+    function openPaymentModal() {
+      if (appData.totalAmount <= 0) { openSetupModal(); return; }
+      inputValue = '0';
+      document.getElementById('memoInput').value = '';
+      updateInputDisplay();
+      document.getElementById('paymentModal').classList.remove('hidden');
+    }
+    function closePaymentModal() { document.getElementById('paymentModal').classList.add('hidden'); }
+
+    function updateInputDisplay() {
+      document.getElementById('inputDisplay').textContent = formatMoney(parseInt(inputValue) || 0);
+    }
+
+    function pressKey(key) {
+      if (key === 'clear') { inputValue = '0'; }
+      else if (key === 'back') { inputValue = inputValue.length > 1 ? inputValue.slice(0, -1) : '0'; }
+      else {
+        if (inputValue === '0') inputValue = key;
+        else if (inputValue.length < 10) inputValue += key;
+      }
+      updateInputDisplay();
+    }
+
+    function addQuickAmount(amount) {
+      inputValue = String((parseInt(inputValue) || 0) + amount);
+      updateInputDisplay();
+    }
+
+    function confirmPayment() {
+      const amount = parseInt(inputValue) || 0;
+      if (amount <= 0) { alert('금액을 입력해주세요.'); return; }
+      const remaining = appData.totalAmount - getPaidTotal(appData);
+      if (amount > remaining) { alert('남은 금액보다 큰 금액은 입력할 수 없습니다.'); return; }
+
+      appData.payments.push({
+        id: generateId(),
+        date: new Date().toISOString(),
+        amount: amount,
+        memo: document.getElementById('memoInput').value.trim()
+      });
+
+      saveData(appData);
+      updateDashboard();
+      renderRecentHistory();
+      closePaymentModal();
+    }
+
+    // ============ 총금액 설정 ============
+    function openSetupModal() {
+      document.getElementById('setupInput').value = appData.totalAmount || '';
+      document.getElementById('setupModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('setupInput').focus(), 100);
+    }
+    function closeSetupModal() { document.getElementById('setupModal').classList.add('hidden'); }
+
+    function confirmSetup() {
+      const val = parseInt(document.getElementById('setupInput').value) || 0;
+      if (val <= 0) { alert('올바른 금액을 입력해주세요.'); return; }
+      appData.totalAmount = val;
+      saveData(appData);
+      updateDashboard();
+      closeSetupModal();
+    }
+
+    // ============ 데이터 내보내기/가져오기 ============
+    function exportData() {
+      const text = JSON.stringify({ version: 1, exportDate: new Date().toISOString(), data: appData }, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('데이터가 클립보드에 복사되었습니다.\n메모장이나 메시지에 붙여넣기 하여 보관하세요.');
+        }).catch(() => downloadFile(text));
+      } else {
+        downloadFile(text);
+      }
+    }
+
+    function downloadFile(text) {
+      const blob = new Blob([text], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `마이너스통장_백업_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }
+
+    function openImportModal() {
+      document.getElementById('importTextarea').value = '';
+      document.getElementById('importModal').classList.remove('hidden');
+    }
+    function closeImportModal() { document.getElementById('importModal').classList.add('hidden'); }
+
+    function confirmImport() {
+      const text = document.getElementById('importTextarea').value.trim();
+      if (!text) { alert('데이터를 붙여넣어 주세요.'); return; }
+      try {
+        const parsed = JSON.parse(text);
+        const imported = parsed.data || parsed;
+        if (typeof imported.totalAmount !== 'number' || !Array.isArray(imported.payments)) throw new Error();
+        if (!confirm('현재 데이터를 덮어씁니다. 계속하시겠습니까?')) return;
+        appData = imported;
+        saveData(appData);
+        updateDashboard();
+        renderRecentHistory();
+        closeImportModal();
+        alert('데이터를 성공적으로 가져왔습니다.');
+      } catch (e) {
+        alert('올바르지 않은 데이터 형식입니다.');
+      }
+    }
+
+    // ============ 초기화 ============
+    if (isAuthenticated()) {
+      showApp();
+    } else {
+      document.getElementById('loginScreen').classList.remove('hidden');
+      setTimeout(() => document.getElementById('loginPassword').focus(), 300);
+    }
+  </script>
+</body>
+</html>

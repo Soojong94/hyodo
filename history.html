@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1e3a5f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>상환 내역 - 마이너스 통장</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+    * { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { background: #f0f4f8; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .fade-in { animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideIn { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+    .history-item { animation: slideIn 0.3s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div id="app" class="max-w-lg mx-auto pb-24">
+
+    <!-- 헤더 -->
+    <header class="bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white px-6 pt-8 pb-6 rounded-b-3xl shadow-lg">
+      <h1 class="text-2xl font-bold text-center mb-4">상환 내역</h1>
+
+      <!-- 요약 카드 -->
+      <div class="flex gap-3">
+        <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
+          <p class="text-blue-200 text-sm">총 상환</p>
+          <p class="text-2xl font-black" id="summaryPaid">0원</p>
+        </div>
+        <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
+          <p class="text-blue-200 text-sm">남은 금액</p>
+          <p class="text-2xl font-black" id="summaryRemaining">0원</p>
+        </div>
+        <div class="flex-1 bg-white/15 rounded-xl p-4 text-center">
+          <p class="text-blue-200 text-sm">총 건수</p>
+          <p class="text-2xl font-black" id="summaryCount">0건</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- 내역 리스트 -->
+    <div class="px-6 mt-6">
+      <div id="historyList" class="space-y-4"></div>
+
+      <div id="emptyState" class="text-center py-16 text-gray-400 hidden">
+        <p class="text-6xl mb-4">📋</p>
+        <p class="text-xl font-bold">상환 내역이 없습니다</p>
+        <a href="index.html" class="inline-block mt-4 bg-[#1e3a5f] text-white font-bold text-lg px-6 py-3 rounded-xl">
+          홈으로 가서 상환하기
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 네비게이션 -->
+  <nav id="bottomNav" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex max-w-lg mx-auto shadow-[0_-2px_10px_rgba(0,0,0,0.05)]"></nav>
+
+  <!-- 삭제 확인 모달 -->
+  <div id="deleteModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeDeleteModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">삭제 확인</h3>
+      <p class="text-gray-500 text-center text-lg mb-6" id="deleteConfirmText">이 내역을 삭제하시겠습니까?</p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">취소</button>
+        <button onclick="confirmDelete()"
+          class="flex-1 bg-red-500 text-white text-xl font-bold py-4 rounded-xl active:bg-red-700 transition-all">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="common.js"></script>
+  <script>
+    // 인증 확인
+    if (!requireAuth()) {
+      // requireAuth()가 리다이렉트 처리
+    } else {
+      init();
+    }
+
+    let appData;
+    let deleteTargetId = null;
+
+    function init() {
+      appData = loadData();
+      renderBottomNav('history');
+      updateSummary();
+      renderHistory();
+    }
+
+    function updateSummary() {
+      const paid = getPaidTotal(appData);
+      const remaining = Math.max(0, appData.totalAmount - paid);
+      document.getElementById('summaryPaid').textContent = formatMoney(paid);
+      document.getElementById('summaryRemaining').textContent = formatMoney(remaining);
+      document.getElementById('summaryCount').textContent = appData.payments.length + '건';
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      const emptyState = document.getElementById('emptyState');
+
+      if (appData.payments.length === 0) {
+        list.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      // 최신순 정렬
+      const sorted = [...appData.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // 월별 그룹핑
+      const groups = {};
+      sorted.forEach(p => {
+        const d = new Date(p.date);
+        const key = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(p);
+      });
+
+      let html = '';
+      for (const [month, items] of Object.entries(groups)) {
+        const monthTotal = items.reduce((s, i) => s + i.amount, 0);
+        html += `
+          <div class="fade-in">
+            <div class="flex items-center justify-between mb-3 px-1">
+              <span class="text-lg font-bold text-gray-600">${month}</span>
+              <span class="text-lg font-bold text-blue-600">${formatMoney(monthTotal)}</span>
+            </div>
+        `;
+
+        items.forEach(item => {
+          const d = new Date(item.date);
+          const dayStr = `${d.getMonth()+1}월 ${d.getDate()}일`;
+          const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          const memo = item.memo ? `<p class="text-gray-400 text-sm mt-1">${escapeHtml(item.memo)}</p>` : '';
+
+          html += `
+            <div class="history-item bg-white rounded-xl p-4 mb-2 shadow-sm border border-gray-100">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-gray-600 text-base font-semibold">${dayStr}</span>
+                  <span class="text-gray-300 text-sm ml-2">${timeStr}</span>
+                  ${memo}
+                </div>
+                <div class="flex items-center gap-3 shrink-0 ml-4">
+                  <span class="text-xl font-bold text-[#1e3a5f]">-${formatMoney(item.amount)}</span>
+                  <button onclick="openDeleteModal('${item.id}')"
+                    class="text-gray-300 active:text-red-500 text-2xl px-1 transition-colors">&times;</button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+      }
+
+      list.innerHTML = html;
+    }
+
+    // ============ 삭제 ============
+    function openDeleteModal(id) {
+      deleteTargetId = id;
+      const item = appData.payments.find(p => p.id === id);
+      if (item) {
+        document.getElementById('deleteConfirmText').textContent =
+          `${formatMoney(item.amount)} 내역을 삭제하시겠습니까?`;
+      }
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      deleteTargetId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    function confirmDelete() {
+      if (deleteTargetId) {
+        appData.payments = appData.payments.filter(p => p.id !== deleteTargetId);
+        saveData(appData);
+        updateSummary();
+        renderHistory();
+      }
+      closeDeleteModal();
+    }
+  </script>
+</body>
+</html>
