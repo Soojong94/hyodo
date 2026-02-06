@@ -14,20 +14,28 @@ function getSupabase() {
 // ============ 인증 (Auth) ============
 
 /**
- * 회원가입 (이메일)
+ * 회원가입 (이메일 + 닉네임)
  */
-async function signupSupabase(email, password) {
+async function signupSupabase(email, password, nickname) {
   const sb = getSupabase();
   if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
 
   const { data, error } = await sb.auth.signUp({
     email,
-    password
+    password,
+    options: {
+      data: { nickname } // 유저 메타데이터에 저장
+    }
   });
 
   if (error) {
     console.error('Signup Error:', error);
     return { ok: false, msg: error.message };
+  }
+
+  // 프로필 테이블에도 닉네임 저장 (schema.sql 수정 필요할 수 있음)
+  if (data.user) {
+    await sb.from('profiles').upsert({ id: data.user.id, nickname });
   }
 
   return { ok: true, user: data.user };
@@ -161,13 +169,9 @@ async function deleteAccountSupabase() {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
 
-  // Supabase Auth 유저는 클라이언트 SDK에서 직접 삭제 불가 (Admin 권한 필요).
-  // 대신 데이터를 모두 지우고 로그아웃 처리.
-  // 실제 서비스에선 '탈퇴 요청' 테이블을 만들거나 Edge Function을 써야 함.
-  // 여기서는 데이터만 지우는 것으로 처리.
-  
-  await sb.from('payments').delete().eq('user_id', user.id);
+  // profiles 테이블 삭제 시 DB 트리거에 의해 auth.users 계정도 함께 삭제됩니다.
   await sb.from('profiles').delete().eq('id', user.id);
+  // profiles이 삭제되면 payments도 ON DELETE CASCADE에 의해 삭제됩니다.
   
   await sb.auth.signOut();
 }
