@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html>
-<head><title>아이콘 생성기</title></head>
-<body>
-<h2>아이콘 생성 중...</h2>
-<canvas id="c192" width="192" height="192"></canvas>
-<canvas id="c512" width="512" height="512"></canvas>
+<head><meta charset="UTF-8"><title>아이콘 생성</title></head>
+<body style="font-family:sans-serif; text-align:center; padding:40px; background:#f0f4f8;">
+<h2>앱 아이콘 생성</h2>
+<p>아래 아이콘이 자동 다운로드됩니다. hyodo 폴더에 넣어주세요.</p>
+<div style="display:flex; gap:20px; justify-content:center; margin-top:20px;">
+  <div><canvas id="c192" width="192" height="192"></canvas><p>192x192</p></div>
+  <div><canvas id="c512" width="512" height="512"></canvas><p>512x512</p></div>
+</div>
 <script>
 function drawIcon(canvas, size) {
   const ctx = canvas.getContext('2d');
-  const r = size * 0.15;
+  const pad = size * 0.02;
 
-  // 배경 (둥근 사각형)
-  ctx.fillStyle = '#1e3a5f';
+  // 둥근 사각형 배경
+  const r = size * 0.22;
   ctx.beginPath();
   ctx.moveTo(r, 0);
   ctx.lineTo(size - r, 0);
@@ -22,33 +25,56 @@ function drawIcon(canvas, size) {
   ctx.quadraticCurveTo(0, size, 0, size - r);
   ctx.lineTo(0, r);
   ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+
+  // 그라디언트 배경
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#1e3a5f');
+  grad.addColorStop(1, '#2563eb');
+  ctx.fillStyle = grad;
   ctx.fill();
 
-  // 하트
+  // 큰 원 (동전)
   const cx = size * 0.5;
-  const cy = size * 0.38;
-  const hs = size * 0.18;
+  const cy = size * 0.44;
+  const coinR = size * 0.28;
 
-  ctx.fillStyle = '#ef4444';
+  // 동전 그림자
   ctx.beginPath();
-  ctx.moveTo(cx, cy + hs * 0.7);
-  ctx.bezierCurveTo(cx - hs * 1.5, cy - hs * 0.3, cx - hs * 0.8, cy - hs * 1.2, cx, cy - hs * 0.4);
-  ctx.bezierCurveTo(cx + hs * 0.8, cy - hs * 1.2, cx + hs * 1.5, cy - hs * 0.3, cx, cy + hs * 0.7);
+  ctx.arc(cx + size*0.01, cy + size*0.015, coinR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.fill();
 
-  // 텍스트 "효도"
+  // 동전 본체
+  ctx.beginPath();
+  ctx.arc(cx, cy, coinR, 0, Math.PI * 2);
+  const coinGrad = ctx.createLinearGradient(cx - coinR, cy - coinR, cx + coinR, cy + coinR);
+  coinGrad.addColorStop(0, '#fbbf24');
+  coinGrad.addColorStop(0.5, '#f59e0b');
+  coinGrad.addColorStop(1, '#d97706');
+  ctx.fillStyle = coinGrad;
+  ctx.fill();
+
+  // 동전 안쪽 원
+  ctx.beginPath();
+  ctx.arc(cx, cy, coinR * 0.78, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = size * 0.015;
+  ctx.stroke();
+
+  // ₩ 기호
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${size * 0.22}px sans-serif`;
+  ctx.font = `900 ${size * 0.28}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('효도', cx, size * 0.68);
+  ctx.fillText('₩', cx, cy + size * 0.01);
 
-  // 원 테두리
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = size * 0.02;
-  ctx.beginPath();
-  ctx.arc(cx, size * 0.5, size * 0.38, 0, Math.PI * 2);
-  ctx.stroke();
+  // 하단 텍스트 "마이너스"
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = `900 ${size * 0.12}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('마이너스', cx, size * 0.82);
 }
 
 [192, 512].forEach(size => {
@@ -57,11 +83,10 @@ function drawIcon(canvas, size) {
   canvas.toBlob(blob => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `icon-${size}.png`;
+    a.download = 'icon-' + size + '.png';
     a.click();
   });
 });
 </script>
-<p>아이콘 파일이 자동으로 다운로드됩니다. 다운로드된 파일을 이 폴더에 넣어주세요.</p>
 </body>
 </html>
