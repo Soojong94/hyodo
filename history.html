@@ -60,14 +60,49 @@
       <p class="text-center text-blue-200 text-sm mt-1" id="progressText">0% 완료</p>
     </header>
 
+    <!-- 필터 -->
+    <div class="px-6 mt-4 space-y-3">
+      <!-- 타입 필터 -->
+      <div class="flex gap-2">
+        <button onclick="setTypeFilter('all')" id="filterAll"
+          class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all">전체</button>
+        <button onclick="setTypeFilter('repayment')" id="filterRepay"
+          class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all">상환만</button>
+        <button onclick="setTypeFilter('spend')" id="filterSpend"
+          class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all">대출만</button>
+      </div>
+      <!-- 월 선택 -->
+      <div class="relative">
+        <button onclick="toggleMonthPicker()" id="monthLabel"
+          class="w-full bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-base font-bold text-gray-600 active:bg-gray-50 flex items-center justify-center gap-2">
+          <span id="monthLabelText">전체 기간</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <!-- 월 피커 드롭다운 -->
+        <div id="monthPicker" class="hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 z-40 fade-in">
+          <div class="flex items-center justify-between mb-3">
+            <button onclick="pickerPrevYear()" class="px-3 py-1 text-gray-400 active:text-[#1e3a5f] text-lg font-bold">&lt;</button>
+            <span id="pickerYear" class="text-lg font-bold text-[#1e3a5f]">2026년</span>
+            <button onclick="pickerNextYear()" class="px-3 py-1 text-gray-400 active:text-[#1e3a5f] text-lg font-bold">&gt;</button>
+          </div>
+          <div id="pickerGrid" class="grid grid-cols-4 gap-2 mb-3"></div>
+          <button onclick="resetMonth()" class="w-full py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-500 active:bg-gray-200">전체 기간</button>
+        </div>
+      </div>
+      <!-- 필터 요약 -->
+      <div id="filterSummary" class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center">
+        <span id="filterSummaryText" class="text-sm font-bold text-gray-500"></span>
+      </div>
+    </div>
+
     <!-- 내역 리스트 -->
-    <div class="px-6 mt-6">
+    <div class="px-6 mt-4">
       <div id="historyList" class="space-y-3"></div>
 
       <div id="emptyState" class="text-center py-16 text-gray-400 hidden">
         <p class="text-6xl mb-4">📋</p>
-        <p class="text-xl font-bold">상환 내역이 없습니다</p>
-        <a href="index.html" class="inline-block mt-4 bg-[#1e3a5f] text-white font-bold text-lg px-6 py-3 rounded-xl">
+        <p class="text-xl font-bold" id="emptyText">상환 내역이 없습니다</p>
+        <a href="index.html" id="emptyLink" class="inline-block mt-4 bg-[#1e3a5f] text-white font-bold text-lg px-6 py-3 rounded-xl">
           홈으로 가서 상환하기
         </a>
       </div>
@@ -96,14 +131,138 @@
   <script>
     let appData = null;
     let deleteTargetId = null;
+    let filterType = 'all';
+    let filterMonth = null; // null = 전체, or { year, month }
+    let availableMonths = []; // [{year,month}, ...]
 
     if (!requireAuth()) {
       // 리다이렉트
     } else {
       appData = loadData();
       renderBottomNav('history');
+      buildAvailableMonths();
       updateSummary();
+      updateFilterUI();
       renderHistory();
+    }
+
+    function buildAvailableMonths() {
+      const set = new Set();
+      appData.payments.forEach(p => {
+        const d = new Date(p.date);
+        set.add(`${d.getFullYear()}-${d.getMonth()+1}`);
+      });
+      availableMonths = [...set].map(s => {
+        const [y, m] = s.split('-').map(Number);
+        return { year: y, month: m };
+      }).sort((a, b) => b.year - a.year || b.month - a.month);
+    }
+
+    function setTypeFilter(type) {
+      filterType = type;
+      updateFilterUI();
+      renderHistory();
+    }
+
+    let pickerYear = new Date().getFullYear();
+
+    function resetMonth() {
+      filterMonth = null;
+      closeMonthPicker();
+      updateFilterUI();
+      renderHistory();
+    }
+
+    function selectMonth(year, month) {
+      filterMonth = { year, month };
+      closeMonthPicker();
+      updateFilterUI();
+      renderHistory();
+    }
+
+    function toggleMonthPicker() {
+      const picker = document.getElementById('monthPicker');
+      if (picker.classList.contains('hidden')) {
+        pickerYear = filterMonth ? filterMonth.year : (availableMonths.length > 0 ? availableMonths[0].year : new Date().getFullYear());
+        renderPickerGrid();
+        picker.classList.remove('hidden');
+      } else {
+        picker.classList.add('hidden');
+      }
+    }
+
+    function closeMonthPicker() {
+      document.getElementById('monthPicker').classList.add('hidden');
+    }
+
+    function pickerPrevYear() { pickerYear--; renderPickerGrid(); }
+    function pickerNextYear() { pickerYear++; renderPickerGrid(); }
+
+    function renderPickerGrid() {
+      document.getElementById('pickerYear').textContent = pickerYear + '년';
+      const grid = document.getElementById('pickerGrid');
+      let html = '';
+      for (let m = 1; m <= 12; m++) {
+        const hasData = availableMonths.some(a => a.year === pickerYear && a.month === m);
+        const isSelected = filterMonth && filterMonth.year === pickerYear && filterMonth.month === m;
+        let cls;
+        if (isSelected) cls = 'bg-[#1e3a5f] text-white font-bold';
+        else if (hasData) cls = 'bg-gray-50 text-gray-700 font-bold active:bg-blue-100';
+        else cls = 'bg-white text-gray-300 cursor-default';
+        html += `<button ${hasData ? `onclick="selectMonth(${pickerYear},${m})"` : 'disabled'}
+          class="py-2.5 rounded-xl text-sm transition-all ${cls}">${m}월</button>`;
+      }
+      grid.innerHTML = html;
+    }
+
+    // 피커 바깥 클릭 시 닫기
+    document.addEventListener('click', function(e) {
+      const picker = document.getElementById('monthPicker');
+      const label = document.getElementById('monthLabel');
+      if (!picker.contains(e.target) && !label.contains(e.target)) {
+        picker.classList.add('hidden');
+      }
+    });
+
+    function getFilteredPayments() {
+      let filtered = [...appData.payments];
+      if (filterType === 'repayment') filtered = filtered.filter(p => !p.type || p.type === 'repayment');
+      else if (filterType === 'spend') filtered = filtered.filter(p => p.type === 'spend');
+      if (filterMonth) {
+        filtered = filtered.filter(p => {
+          const d = new Date(p.date);
+          return d.getFullYear() === filterMonth.year && d.getMonth() + 1 === filterMonth.month;
+        });
+      }
+      return filtered;
+    }
+
+    function updateFilterUI() {
+      const btnBase = 'flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ';
+      const active = 'bg-[#1e3a5f] text-white shadow';
+      const inactive = 'bg-white text-gray-400 border border-gray-200';
+      document.getElementById('filterAll').className = btnBase + (filterType === 'all' ? active : inactive);
+      document.getElementById('filterRepay').className = btnBase + (filterType === 'repayment' ? 'bg-green-500 text-white shadow' : inactive);
+      document.getElementById('filterSpend').className = btnBase + (filterType === 'spend' ? 'bg-orange-500 text-white shadow' : inactive);
+
+      document.getElementById('monthLabelText').textContent = filterMonth ? `${filterMonth.year}년 ${filterMonth.month}월` : '전체 기간';
+
+      // 필터 요약
+      const filtered = getFilteredPayments();
+      const repaySum = filtered.filter(p => !p.type || p.type === 'repayment').reduce((s, p) => s + p.amount, 0);
+      const spendSum = filtered.filter(p => p.type === 'spend').reduce((s, p) => s + p.amount, 0);
+      const summaryEl = document.getElementById('filterSummary');
+      const textEl = document.getElementById('filterSummaryText');
+
+      let parts = [];
+      if (filterType !== 'spend' && repaySum > 0) parts.push(`<span class="text-green-600">상환 ${formatMoney(repaySum)}</span>`);
+      if (filterType !== 'repayment' && spendSum > 0) parts.push(`<span class="text-orange-500">대출 ${formatMoney(spendSum)}</span>`);
+      if (parts.length > 0) {
+        textEl.innerHTML = parts.join(' <span class="text-gray-300 mx-1">|</span> ') + ` <span class="text-gray-400">(${filtered.length}건)</span>`;
+        summaryEl.classList.remove('hidden');
+      } else {
+        summaryEl.classList.add('hidden');
+      }
     }
 
     function updateSummary() {
@@ -132,15 +291,21 @@
     function renderHistory() {
       const list = document.getElementById('historyList');
       const emptyState = document.getElementById('emptyState');
+      const filtered = getFilteredPayments();
 
-      if (appData.payments.length === 0) {
+      if (filtered.length === 0) {
         list.innerHTML = '';
+        const hasAnyData = appData.payments.length > 0;
+        document.getElementById('emptyText').textContent = hasAnyData ? '조건에 맞는 내역이 없습니다' : '상환 내역이 없습니다';
+        document.getElementById('emptyLink').textContent = hasAnyData ? '필터 초기화' : '홈으로 가서 상환하기';
+        document.getElementById('emptyLink').href = hasAnyData ? 'javascript:void(0)' : 'index.html';
+        document.getElementById('emptyLink').onclick = hasAnyData ? function() { filterType='all'; filterMonth=null; updateFilterUI(); renderHistory(); } : null;
         emptyState.classList.remove('hidden');
         return;
       }
 
       emptyState.classList.add('hidden');
-      const sorted = [...appData.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
       // 월별 그룹핑
       const groups = {};
@@ -219,7 +384,9 @@
       if (deleteTargetId) {
         appData.payments = appData.payments.filter(p => p.id !== deleteTargetId);
         saveData(appData);
+        buildAvailableMonths();
         updateSummary();
+        updateFilterUI();
         renderHistory();
       }
       closeDeleteModal();
