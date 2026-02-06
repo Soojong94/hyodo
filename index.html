@@ -289,6 +289,8 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
   <script src="common.js"></script>
   <script>
     let appData = null;
@@ -315,10 +317,93 @@
       setTimeout(() => el.classList.add('hidden'), 3000);
     }
 
-    function doLogin() {
-      const id = document.getElementById('loginId').value;
-      const pw = document.getElementById('loginPw').value;
+    function setAuthLoading(formType, loading) {
+      const isLogin = formType === 'login';
+      const btn = isLogin
+        ? document.querySelector('#loginForm button[onclick="doLogin()"]')
+        : document.querySelector('#signupForm button[onclick="doSignup()"]');
+      if (!btn) return;
+      if (loading) {
+        btn.disabled = true;
+        btn.dataset.origText = btn.textContent;
+        btn.textContent = isLogin ? '로그인 중...' : '가입 중...';
+        btn.classList.add('opacity-70');
+      } else {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.origText || (isLogin ? '로그인' : '가입하기');
+        btn.classList.remove('opacity-70');
+      }
+    }
+
+    async function doLogin() {
+      const id = document.getElementById('loginId').value.trim();
+      const pw = document.getElementById('loginPw').value.trim();
+
+      if (!id || !pw) {
+        showAuthError('loginError', '아이디와 비밀번호를 입력해주세요.');
+        return;
+      }
+
+      setAuthLoading('login', true);
+
+      try {
+        if (typeof loginSupabase === 'function') {
+          const sbResult = await loginSupabase(id, pw);
+
+          if (sbResult.ok) {
+            // Supabase 로그인 성공 → 클라우드 데이터 동기화
+            localStorage.setItem(AUTH_KEY, id);
+            addLoginLog(id, 'login');
+            const cloudData = await pullFromSupabase(id);
+            if (cloudData) {
+              localStorage.setItem('hyodo_data_' + id, JSON.stringify(cloudData));
+            }
+            const users = getUsers();
+            if (!users[id]) {
+              users[id] = { password: pw, createdAt: new Date().toISOString() };
+              saveUsers(users);
+            }
+            setAuthLoading('login', false);
+            showApp();
+            return;
+          }
+
+          if (sbResult.notFound) {
+            // Supabase에 없음 → 로컬에 있으면 마이그레이션
+            const localResult = login(id, pw);
+            if (localResult.ok) {
+              try {
+                await signupSupabase(id, pw);
+                const localData = loadData();
+                await pushToSupabase(id, localData);
+              } catch (e) { /* 마이그레이션 실패해도 로컬 로그인은 유지 */ }
+              setAuthLoading('login', false);
+              showApp();
+              return;
+            }
+          }
+
+          setAuthLoading('login', false);
+          showAuthError('loginError', sbResult.msg);
+          return;
+        }
+      } catch (e) {
+        // 네트워크 오류 → 로컬 로그인 시도
+        console.warn('Supabase 연결 실패, 로컬 로그인 시도:', e);
+        const localResult = login(id, pw);
+        if (localResult.ok) {
+          setAuthLoading('login', false);
+          showApp();
+          return;
+        }
+        setAuthLoading('login', false);
+        showAuthError('loginError', '서버에 연결할 수 없습니다.');
+        return;
+      }
+
+      // Supabase 미사용 → 로컬 로그인
       const result = login(id, pw);
+      setAuthLoading('login', false);
       if (result.ok) {
         showApp();
       } else {
@@ -326,24 +411,48 @@
       }
     }
 
-    function doSignup() {
-      const id = document.getElementById('signupId').value;
-      const pw = document.getElementById('signupPw').value;
-      const result = signup(id, pw);
-      if (result.ok) {
-        const el = document.getElementById('signupSuccess');
-        el.textContent = '가입 완료! 로그인해주세요.';
-        el.classList.remove('hidden');
-        setTimeout(() => {
-          el.classList.add('hidden');
-          document.getElementById('loginId').value = id;
-          document.getElementById('loginPw').value = '';
-          showLogin();
-          document.getElementById('loginPw').focus();
-        }, 1200);
-      } else {
-        showAuthError('signupError', result.msg);
+    async function doSignup() {
+      const id = document.getElementById('signupId').value.trim();
+      const pw = document.getElementById('signupPw').value.trim();
+
+      if (!id || !pw) { showAuthError('signupError', '아이디와 비밀번호를 입력해주세요.'); return; }
+      if (id.length < 2) { showAuthError('signupError', '아이디는 2자 이상이어야 합니다.'); return; }
+      if (pw.length < 4) { showAuthError('signupError', '비밀번호는 4자 이상이어야 합니다.'); return; }
+
+      setAuthLoading('signup', true);
+
+      try {
+        if (typeof signupSupabase === 'function') {
+          const sbResult = await signupSupabase(id, pw);
+          if (!sbResult.ok) {
+            setAuthLoading('signup', false);
+            showAuthError('signupError', sbResult.msg);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Supabase 회원가입 실패, 로컬 저장:', e);
       }
+
+      // 로컬에도 저장
+      const users = getUsers();
+      if (!users[id]) {
+        users[id] = { password: pw, createdAt: new Date().toISOString() };
+        saveUsers(users);
+      }
+      addLoginLog(id, 'signup');
+
+      setAuthLoading('signup', false);
+      const el = document.getElementById('signupSuccess');
+      el.textContent = '가입 완료! 로그인해주세요.';
+      el.classList.remove('hidden');
+      setTimeout(() => {
+        el.classList.add('hidden');
+        document.getElementById('loginId').value = id;
+        document.getElementById('loginPw').value = '';
+        showLogin();
+        document.getElementById('loginPw').focus();
+      }, 1200);
     }
 
     function doLogout() { logout(); }

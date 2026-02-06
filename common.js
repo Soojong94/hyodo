@@ -59,6 +59,9 @@ function logout() {
 function deleteAccount() {
   const user = getCurrentUser();
   if (!user) return;
+  if (typeof deleteAccountSupabase === 'function') {
+    deleteAccountSupabase(user).catch(e => console.warn('클라우드 계정 삭제 실패:', e));
+  }
   const users = getUsers();
   delete users[user];
   saveUsers(users);
@@ -112,6 +115,11 @@ function loadData() {
 
 function saveData(data) {
   localStorage.setItem(getStorageKey(), JSON.stringify(data));
+  // 클라우드 동기화 (백그라운드)
+  const user = getCurrentUser();
+  if (user && typeof pushToSupabase === 'function') {
+    pushToSupabase(user, data).catch(e => console.warn('클라우드 동기화 실패:', e));
+  }
 }
 
 // ============ 유틸리티 ============

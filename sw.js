@@ -1,9 +1,10 @@
-const CACHE_NAME = 'hyodo-v3';
+const CACHE_NAME = 'hyodo-v4';
 const ASSETS = [
   './',
   './index.html',
   './history.html',
   './common.js',
+  './supabase.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
