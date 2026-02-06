@@ -11,66 +11,98 @@ function getSupabase() {
   return _sb;
 }
 
-// ============ 인증 ============
-async function signupSupabase(username, password) {
-  const sb = getSupabase();
-  if (!sb) throw new Error('Supabase 클라이언트 초기화 실패');
+// ============ 인증 (Auth) ============
 
-  const { data, error } = await sb
-    .from('users')
-    .insert({ username, password })
-    .select()
-    .single();
+/**
+ * 회원가입 (이메일)
+ */
+async function signupSupabase(email, password) {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
+
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password
+  });
 
   if (error) {
-    if (error.code === '23505') return { ok: false, msg: '이미 존재하는 아이디입니다.' };
-    throw error;
+    console.error('Signup Error:', error);
+    return { ok: false, msg: error.message };
   }
 
-  return { ok: true, userId: data.id };
+  return { ok: true, user: data.user };
 }
 
-async function loginSupabase(username, password) {
+/**
+ * 로그인 (이메일)
+ */
+async function loginSupabase(email, password) {
   const sb = getSupabase();
-  if (!sb) throw new Error('Supabase 클라이언트 초기화 실패');
+  if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
 
-  const { data: user, error } = await sb
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .single();
+  const { data, error } = await sb.auth.signInWithPassword({
+    email,
+    password
+  });
 
-  if (error || !user) {
-    return { ok: false, msg: '존재하지 않는 아이디입니다.', notFound: true };
+  if (error) {
+    console.error('Login Error:', error);
+    // 보안상 상세 에러보다는 일반적인 메시지 추천하지만 디버깅 위해 구분
+    if (error.message.includes('Invalid login credentials')) {
+      return { ok: false, msg: '이메일 또는 비밀번호가 잘못되었습니다.' };
+    }
+    return { ok: false, msg: error.message };
   }
 
-  if (user.password !== password) {
-    return { ok: false, msg: '비밀번호가 틀렸습니다.' };
-  }
-
-  return { ok: true, userId: user.id, totalAmount: user.total_amount };
+  return { ok: true, user: data.user };
 }
 
-// ============ 데이터 동기화 ============
-async function pullFromSupabase(username) {
+/**
+ * 로그아웃
+ */
+async function logoutSupabase() {
+  const sb = getSupabase();
+  if (sb) await sb.auth.signOut();
+}
+
+/**
+ * 현재 로그인된 유저 세션 확인
+ */
+async function getSessionSupabase() {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data } = await sb.auth.getSession();
+  return data.session;
+}
+
+// ============ 데이터 동기화 (DB) ============
+
+/**
+ * 데이터 불러오기 (로그인된 유저의 데이터)
+ */
+async function pullFromSupabase() {
   const sb = getSupabase();
   if (!sb) return null;
 
-  const { data: user } = await sb
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .single();
-
+  // 1. 현재 유저 확인
+  const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
 
+  // 2. 프로필(총 금액) 가져오기
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('total_amount')
+    .eq('id', user.id)
+    .single();
+
+  // 3. 결제 내역 가져오기
   const { data: payments } = await sb
     .from('payments')
     .select('*')
-    .eq('user_id', user.id);
+    .eq('user_id', user.id); // RLS가 있어서 .eq 생략해도 되지만 명시적으로 작성
 
   return {
-    totalAmount: user.total_amount || 0,
+    totalAmount: profile ? profile.total_amount : 0,
     payments: (payments || []).map(p => ({
       id: p.id,
       date: p.date,
@@ -81,56 +113,61 @@ async function pullFromSupabase(username) {
   };
 }
 
-async function pushToSupabase(username, data) {
+/**
+ * 데이터 저장하기 (로그인된 유저의 데이터 덮어쓰기)
+ * - 실제 서비스에선 '변경분'만 업데이트하는 게 좋지만, 로직 단순화를 위해 전체 동기화 방식 유지
+ */
+async function pushToSupabase(data) {
   const sb = getSupabase();
   if (!sb) return;
 
-  const { data: user } = await sb
-    .from('users')
-    .select('id')
-    .eq('username', username)
-    .single();
-
+  const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
 
-  // 총 금액 업데이트
+  // 1. 총 금액 업데이트 (profiles)
   await sb
-    .from('users')
-    .update({ total_amount: data.totalAmount })
-    .eq('id', user.id);
+    .from('profiles')
+    .upsert({ id: user.id, total_amount: data.totalAmount });
 
-  // 기존 내역 삭제 후 재삽입
-  await sb
-    .from('payments')
-    .delete()
-    .eq('user_id', user.id);
+  // 2. 기존 내역 삭제 후 재삽입 (단순 동기화 전략)
+  // 주의: 데이터가 많아지면 비효율적이므로 추후 수정 권장
+  
+  // 먼저 기존 데이터를 다 지움
+  await sb.from('payments').delete().eq('user_id', user.id);
 
+  // 새 데이터 삽입
   if (data.payments.length > 0) {
-    await sb.from('payments').insert(
-      data.payments.map(p => ({
-        id: p.id,
-        user_id: user.id,
-        date: p.date,
-        amount: p.amount,
-        memo: p.memo || '',
-        type: p.type || 'repayment'
-      }))
-    );
+    const records = data.payments.map(p => ({
+      id: p.id, // 클라이언트 ID 유지
+      user_id: user.id,
+      date: p.date,
+      amount: p.amount,
+      memo: p.memo || '',
+      type: p.type || 'repayment'
+    }));
+    
+    const { error } = await sb.from('payments').insert(records);
+    if (error) console.error('Data Push Error:', error);
   }
 }
 
-async function deleteAccountSupabase(username) {
+/**
+ * 계정 삭제
+ */
+async function deleteAccountSupabase() {
   const sb = getSupabase();
   if (!sb) return;
 
-  const { data: user } = await sb
-    .from('users')
-    .select('id')
-    .eq('username', username)
-    .single();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
 
-  if (user) {
-    await sb.from('payments').delete().eq('user_id', user.id);
-    await sb.from('users').delete().eq('id', user.id);
-  }
+  // Supabase Auth 유저는 클라이언트 SDK에서 직접 삭제 불가 (Admin 권한 필요).
+  // 대신 데이터를 모두 지우고 로그아웃 처리.
+  // 실제 서비스에선 '탈퇴 요청' 테이블을 만들거나 Edge Function을 써야 함.
+  // 여기서는 데이터만 지우는 것으로 처리.
+  
+  await sb.from('payments').delete().eq('user_id', user.id);
+  await sb.from('profiles').delete().eq('id', user.id);
+  
+  await sb.auth.signOut();
 }

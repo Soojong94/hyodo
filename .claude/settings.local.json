@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(copy \"d:\\\\Dev_Group\\\\hyodo\\\\ChatGPT Image 2026년 2월 6일 오후 09_01_22.png\" \"d:\\\\Dev_Group\\\\hyodo\\\\icon-192.png\")",
+      "Bash(copy:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo view:*)"
+    ]
+  }
+}

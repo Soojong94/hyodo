@@ -71,7 +71,7 @@
 
       <!-- 로그인 폼 -->
       <div id="loginForm" class="space-y-3">
-        <input id="loginId" type="text" placeholder="아이디" class="auth-input"
+        <input id="loginId" type="email" placeholder="이메일" class="auth-input"
           onkeydown="if(event.key==='Enter') document.getElementById('loginPw').focus()">
         <input id="loginPw" type="password" placeholder="비밀번호" class="auth-input"
           onkeydown="if(event.key==='Enter') doLogin()">
@@ -88,7 +88,7 @@
 
       <!-- 회원가입 폼 -->
       <div id="signupForm" class="space-y-3 hidden">
-        <input id="signupId" type="text" placeholder="아이디 (2자 이상)" class="auth-input"
+        <input id="signupId" type="email" placeholder="이메일" class="auth-input"
           onkeydown="if(event.key==='Enter') document.getElementById('signupPw').focus()">
         <input id="signupPw" type="password" placeholder="비밀번호 (4자 이상)" class="auth-input"
           onkeydown="if(event.key==='Enter') doSignup()">
@@ -336,123 +336,59 @@
     }
 
     async function doLogin() {
-      const id = document.getElementById('loginId').value.trim();
+      const email = document.getElementById('loginId').value.trim();
       const pw = document.getElementById('loginPw').value.trim();
 
-      if (!id || !pw) {
-        showAuthError('loginError', '아이디와 비밀번호를 입력해주세요.');
+      if (!email || !pw) {
+        showAuthError('loginError', '이메일과 비밀번호를 입력해주세요.');
         return;
       }
 
       setAuthLoading('login', true);
 
-      try {
-        if (typeof loginSupabase === 'function') {
-          const sbResult = await loginSupabase(id, pw);
-
-          if (sbResult.ok) {
-            // Supabase 로그인 성공 → 클라우드 데이터 동기화
-            localStorage.setItem(AUTH_KEY, id);
-            addLoginLog(id, 'login');
-            const cloudData = await pullFromSupabase(id);
-            if (cloudData) {
-              localStorage.setItem('hyodo_data_' + id, JSON.stringify(cloudData));
-            }
-            const users = getUsers();
-            if (!users[id]) {
-              users[id] = { password: pw, createdAt: new Date().toISOString() };
-              saveUsers(users);
-            }
-            setAuthLoading('login', false);
-            showApp();
-            return;
-          }
-
-          if (sbResult.notFound) {
-            // Supabase에 없음 → 로컬에 있으면 마이그레이션
-            const localResult = login(id, pw);
-            if (localResult.ok) {
-              try {
-                await signupSupabase(id, pw);
-                const localData = loadData();
-                await pushToSupabase(id, localData);
-              } catch (e) { /* 마이그레이션 실패해도 로컬 로그인은 유지 */ }
-              setAuthLoading('login', false);
-              showApp();
-              return;
-            }
-          }
-
-          setAuthLoading('login', false);
-          showAuthError('loginError', sbResult.msg);
-          return;
-        }
-      } catch (e) {
-        // 네트워크 오류 → 로컬 로그인 시도
-        console.warn('Supabase 연결 실패, 로컬 로그인 시도:', e);
-        const localResult = login(id, pw);
-        if (localResult.ok) {
-          setAuthLoading('login', false);
-          showApp();
-          return;
-        }
-        setAuthLoading('login', false);
-        showAuthError('loginError', '서버에 연결할 수 없습니다.');
-        return;
-      }
-
-      // Supabase 미사용 → 로컬 로그인
-      const result = login(id, pw);
-      setAuthLoading('login', false);
+      const result = await login(email, pw);
       if (result.ok) {
+        await syncData(); // 로그인 성공 후 데이터 동기화
+        setAuthLoading('login', false);
         showApp();
       } else {
-        showAuthError('loginError', result.msg);
+        setAuthLoading('login', false);
+        showAuthError('loginError', result.msg || '로그인 실패');
       }
     }
 
     async function doSignup() {
-      const id = document.getElementById('signupId').value.trim();
+      const email = document.getElementById('signupId').value.trim();
       const pw = document.getElementById('signupPw').value.trim();
 
-      if (!id || !pw) { showAuthError('signupError', '아이디와 비밀번호를 입력해주세요.'); return; }
-      if (id.length < 2) { showAuthError('signupError', '아이디는 2자 이상이어야 합니다.'); return; }
-      if (pw.length < 4) { showAuthError('signupError', '비밀번호는 4자 이상이어야 합니다.'); return; }
-
+      if (!email || !pw) { showAuthError('signupError', '이메일과 비밀번호를 입력해주세요.'); return; }
+      
       setAuthLoading('signup', true);
 
-      try {
-        if (typeof signupSupabase === 'function') {
-          const sbResult = await signupSupabase(id, pw);
-          if (!sbResult.ok) {
-            setAuthLoading('signup', false);
-            showAuthError('signupError', sbResult.msg);
-            return;
-          }
+      const result = await signup(email, pw);
+      if (result.ok) {
+        setAuthLoading('signup', false);
+        
+        // 바로 로그인 성공한 경우 (common.js signup 로직 참조)
+        if (isAuthenticated()) {
+          showApp();
+          return;
         }
-      } catch (e) {
-        console.warn('Supabase 회원가입 실패, 로컬 저장:', e);
-      }
 
-      // 로컬에도 저장
-      const users = getUsers();
-      if (!users[id]) {
-        users[id] = { password: pw, createdAt: new Date().toISOString() };
-        saveUsers(users);
+        const el = document.getElementById('signupSuccess');
+        el.textContent = result.msg || '가입 완료! 로그인해주세요.';
+        el.classList.remove('hidden');
+        setTimeout(() => {
+          el.classList.add('hidden');
+          document.getElementById('loginId').value = email;
+          document.getElementById('loginPw').value = '';
+          showLogin();
+          document.getElementById('loginPw').focus();
+        }, 1200);
+      } else {
+        setAuthLoading('signup', false);
+        showAuthError('signupError', result.msg || '가입 실패');
       }
-      addLoginLog(id, 'signup');
-
-      setAuthLoading('signup', false);
-      const el = document.getElementById('signupSuccess');
-      el.textContent = '가입 완료! 로그인해주세요.';
-      el.classList.remove('hidden');
-      setTimeout(() => {
-        el.classList.add('hidden');
-        document.getElementById('loginId').value = id;
-        document.getElementById('loginPw').value = '';
-        showLogin();
-        document.getElementById('loginPw').focus();
-      }, 1200);
     }
 
     function doLogout() { logout(); }
@@ -692,12 +628,18 @@
     function confirmDeleteAccount() { deleteAccount(); }
 
     // ============ 초기화 ============
-    if (isAuthenticated()) {
-      showApp();
-    } else {
-      document.getElementById('authScreen').classList.remove('hidden');
-      setTimeout(() => document.getElementById('loginId').focus(), 300);
-    }
+    (async function init() {
+      const isAuth = await initAuth();
+      if (isAuth) {
+        // 로그인 상태면 데이터 동기화 후 앱 표시
+        await syncData();
+        showApp();
+      } else {
+        // 비로그인 상태면 로그인 화면 표시
+        document.getElementById('authScreen').classList.remove('hidden');
+        setTimeout(() => document.getElementById('loginId').focus(), 300);
+      }
+    })();
   </script>
 </body>
 </html>

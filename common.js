@@ -1,124 +1,141 @@
 // ============ 스토리지 키 ============
-const USERS_KEY = 'hyodo_users';
-const AUTH_KEY = 'hyodo_auth';
-const LOGIN_LOG_KEY = 'hyodo_login_log';
+const STORAGE_KEY_PREFIX = 'hyodo_data_v2_'; // 유저별 데이터 저장 키 접두사
+const LAST_USER_KEY = 'hyodo_last_user'; // 마지막 로그인 이메일
 
-// ============ 사용자 관리 ============
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
-  catch { return {}; }
-}
+// ============ 전역 상태 ============
+let currentUserEmail = null;
 
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
+// ============ 인증 관리 ============
 
-function signup(username, password) {
-  const id = username.trim();
-  const pw = password.trim();
-  if (!id || !pw) return { ok: false, msg: '아이디와 비밀번호를 입력해주세요.' };
-  if (id.length < 2) return { ok: false, msg: '아이디는 2자 이상이어야 합니다.' };
-  if (pw.length < 4) return { ok: false, msg: '비밀번호는 4자 이상이어야 합니다.' };
-
-  const users = getUsers();
-  if (users[id]) return { ok: false, msg: '이미 존재하는 아이디입니다.' };
-
-  users[id] = { password: pw, createdAt: new Date().toISOString() };
-  saveUsers(users);
-  addLoginLog(id, 'signup');
-  return { ok: true };
-}
-
-function login(username, password) {
-  const id = username.trim();
-  const pw = password.trim();
-  if (!id || !pw) return { ok: false, msg: '아이디와 비밀번호를 입력해주세요.' };
-
-  const users = getUsers();
-  if (!users[id]) return { ok: false, msg: '존재하지 않는 아이디입니다.' };
-  if (users[id].password !== pw) return { ok: false, msg: '비밀번호가 틀렸습니다.' };
-
-  localStorage.setItem(AUTH_KEY, id);
-  addLoginLog(id, 'login');
-  return { ok: true };
+// 초기화: 페이지 로드 시 세션 복구 시도
+async function initAuth() {
+  if (typeof getSessionSupabase !== 'function') return false;
+  
+  const session = await getSessionSupabase();
+  if (session && session.user) {
+    currentUserEmail = session.user.email;
+    return true;
+  }
+  return false;
 }
 
 function getCurrentUser() {
-  return localStorage.getItem(AUTH_KEY);
+  return currentUserEmail;
 }
 
 function isAuthenticated() {
-  return !!getCurrentUser();
+  return !!currentUserEmail;
 }
 
-function logout() {
-  localStorage.removeItem(AUTH_KEY);
-  window.location.href = 'index.html';
-}
-
-function deleteAccount() {
-  const user = getCurrentUser();
-  if (!user) return;
-  if (typeof deleteAccountSupabase === 'function') {
-    deleteAccountSupabase(user).catch(e => console.warn('클라우드 계정 삭제 실패:', e));
+async function login(email, password) {
+  if (!email || !password) return { ok: false, msg: '이메일과 비밀번호를 입력해주세요.' };
+  
+  try {
+    const result = await loginSupabase(email, password);
+    if (result.ok) {
+      currentUserEmail = result.user.email;
+      localStorage.setItem(LAST_USER_KEY, currentUserEmail);
+      return { ok: true };
+    }
+    return result;
+  } catch (e) {
+    console.error(e);
+    return { ok: false, msg: '로그인 중 오류가 발생했습니다.' };
   }
-  const users = getUsers();
-  delete users[user];
-  saveUsers(users);
-  localStorage.removeItem('hyodo_data_' + user);
-  localStorage.removeItem(AUTH_KEY);
-  window.location.href = 'index.html';
 }
 
-function requireAuth() {
-  if (!isAuthenticated()) {
-    window.location.href = 'index.html';
-    return false;
+async function signup(email, password) {
+  if (!email || !password) return { ok: false, msg: '이메일과 비밀번호를 입력해주세요.' };
+  if (password.length < 6) return { ok: false, msg: '비밀번호는 6자 이상이어야 합니다.' }; // Supabase 기본 정책
+  
+  try {
+    const result = await signupSupabase(email, password);
+    if (result.ok) {
+      // 자동 로그인 처리 안됨 (이메일 확인 필요할 수 있음) -> 바로 로그인 시도해보기
+      // Supabase 설정에서 'Confirm email'이 꺼져있다면 바로 로그인 가능
+      const loginResult = await loginSupabase(email, password);
+      if (loginResult.ok) {
+        currentUserEmail = loginResult.user.email;
+        localStorage.setItem(LAST_USER_KEY, currentUserEmail);
+        return { ok: true };
+      }
+      return { ok: true, msg: '가입되었습니다. 로그인해주세요.' }; 
+    }
+    return result;
+  } catch (e) {
+    return { ok: false, msg: '가입 중 오류가 발생했습니다.' };
   }
-  return true;
 }
 
-// ============ 로그인 기록 ============
-function addLoginLog(username, action) {
-  const log = getLoginLog();
-  log.push({ username, action, time: new Date().toISOString() });
-  localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(log));
+async function logout() {
+  await logoutSupabase();
+  currentUserEmail = null;
+  localStorage.removeItem(LAST_USER_KEY);
+  window.location.reload();
 }
 
-function getLoginLog() {
-  try { return JSON.parse(localStorage.getItem(LOGIN_LOG_KEY)) || []; }
-  catch { return []; }
+async function deleteAccount() {
+  if (!confirm('정말로 탈퇴하시겠습니까? 모든 데이터가 삭제됩니다.')) return;
+  await deleteAccountSupabase();
+  currentUserEmail = null;
+  localStorage.removeItem(LAST_USER_KEY);
+  alert('탈퇴되었습니다.');
+  window.location.reload();
 }
 
-// ============ 데이터 관리 (유저별) ============
+// ============ 데이터 관리 ============
+
 function getStorageKey() {
-  const user = getCurrentUser();
-  return user ? 'hyodo_data_' + user : 'hyodo_data';
+  return currentUserEmail ? STORAGE_KEY_PREFIX + currentUserEmail : 'hyodo_temp_data';
 }
 
 function getDefaultData() {
   return { totalAmount: 0, payments: [] };
 }
 
+// 데이터 불러오기: 로컬 캐시 우선, 그 후 클라우드 동기화
 function loadData() {
   try {
     const raw = localStorage.getItem(getStorageKey());
-    if (!raw) return getDefaultData();
-    const data = JSON.parse(raw);
+    const data = raw ? JSON.parse(raw) : getDefaultData();
+    
+    // 데이터 구조 안전장치
     if (!Array.isArray(data.payments)) data.payments = [];
     if (typeof data.totalAmount !== 'number') data.totalAmount = 0;
+    
     return data;
   } catch (e) {
     return getDefaultData();
   }
 }
 
-function saveData(data) {
+// 클라우드 데이터와 동기화 (앱 시작 시 호출)
+async function syncData() {
+  if (!isAuthenticated()) return null;
+  
+  try {
+    const cloudData = await pullFromSupabase();
+    if (cloudData) {
+      // 클라우드 데이터가 있으면 로컬 덮어쓰기 (단순화)
+      localStorage.setItem(getStorageKey(), JSON.stringify(cloudData));
+      return cloudData;
+    }
+  } catch (e) {
+    console.warn('데이터 동기화 실패:', e);
+  }
+  return null;
+}
+
+// 데이터 저장: 로컬 저장 후 클라우드 전송
+async function saveData(data) {
   localStorage.setItem(getStorageKey(), JSON.stringify(data));
-  // 클라우드 동기화 (백그라운드)
-  const user = getCurrentUser();
-  if (user && typeof pushToSupabase === 'function') {
-    pushToSupabase(user, data).catch(e => console.warn('클라우드 동기화 실패:', e));
+  
+  if (isAuthenticated()) {
+    try {
+      await pushToSupabase(data);
+    } catch (e) {
+      console.warn('클라우드 저장 실패:', e);
+    }
   }
 }
 
@@ -128,18 +145,24 @@ function formatMoney(num) {
 }
 
 function getPaidTotal(data) {
-  return data.payments.filter(p => !p.type || p.type === 'repayment').reduce((sum, p) => sum + p.amount, 0);
+  return data.payments
+    .filter(p => !p.type || p.type === 'repayment')
+    .reduce((sum, p) => sum + p.amount, 0);
 }
 
 function getSpendTotal(data) {
-  return data.payments.filter(p => p.type === 'spend').reduce((sum, p) => sum + p.amount, 0);
+  return data.payments
+    .filter(p => p.type === 'spend')
+    .reduce((sum, p) => sum + p.amount, 0);
 }
 
 function getEffectiveTotal(data) {
+  // 유효 총액 = 설정한 총액 + 추가 대출액
   return data.totalAmount + getSpendTotal(data);
 }
 
 function escapeHtml(text) {
+  if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
@@ -147,6 +170,17 @@ function escapeHtml(text) {
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// ============ 로그인 로그 (로컬 전용) ============
+// 기능 유지하되 로컬에만 저장
+const LOGIN_LOG_KEY = 'hyodo_login_log';
+function addLoginLog(username, action) {
+  try {
+    const log = JSON.parse(localStorage.getItem(LOGIN_LOG_KEY)) || [];
+    log.push({ username, action, time: new Date().toISOString() });
+    localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(log));
+  } catch (e) {}
 }
 
 // ============ 하단 네비게이션 ============
@@ -175,9 +209,4 @@ function renderBottomNav(activePage) {
       <span class="text-sm font-bold">내역</span>
     </a>
   `;
-}
-
-// ============ PWA 서비스워커 ============
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
 }

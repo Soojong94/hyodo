@@ -137,16 +137,24 @@
     let filterMonth = null; // null = 전체, or { year, month }
     let availableMonths = []; // [{year,month}, ...]
 
-    if (!requireAuth()) {
-      // 리다이렉트
-    } else {
+    (async function init() {
+      const isAuth = await initAuth();
+      if (!isAuth) {
+        // 비로그인 시 홈으로 리다이렉트
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      // 데이터 동기화 시도
+      await syncData();
+      
       appData = loadData();
       renderBottomNav('history');
       buildAvailableMonths();
       updateSummary();
       updateFilterUI();
       renderHistory();
-    }
+    })();
 
     function buildAvailableMonths() {
       const set = new Set();
