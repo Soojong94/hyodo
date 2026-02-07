@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hyodo-v5';
+const CACHE_NAME = 'hyodo-v6';
 const ASSETS = [
   './',
   './index.html',

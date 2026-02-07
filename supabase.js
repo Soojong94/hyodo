@@ -83,6 +83,82 @@ async function getSessionSupabase() {
   return data.session;
 }
 
+/**
+ * 닉네임 변경
+ */
+async function updateNicknameSupabase(nickname) {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
+
+  // auth user_metadata 업데이트
+  const { error: authError } = await sb.auth.updateUser({
+    data: { nickname }
+  });
+  if (authError) return { ok: false, msg: authError.message };
+
+  // profiles 테이블도 업데이트
+  const { data: { user } } = await sb.auth.getUser();
+  if (user) {
+    await sb.from('profiles').update({ nickname }).eq('id', user.id);
+  }
+
+  return { ok: true };
+}
+
+/**
+ * 비밀번호 재설정 이메일 발송
+ */
+async function resetPasswordSupabase(email) {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/index.html'
+  });
+
+  if (error) return { ok: false, msg: error.message };
+  return { ok: true };
+}
+
+/**
+ * 새 비밀번호 설정 (리커버리 후)
+ */
+async function updatePasswordSupabase(newPassword) {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
+
+  const { error } = await sb.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, msg: error.message };
+  return { ok: true };
+}
+
+/**
+ * 닉네임으로 이메일 찾기 (마스킹)
+ */
+async function findEmailByNicknameSupabase(nickname) {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, msg: 'Supabase 클라이언트 오류' };
+
+  const { data, error } = await sb.rpc('find_email_by_nickname', {
+    p_nickname: nickname
+  });
+
+  if (error) return { ok: false, msg: error.message };
+  if (!data) return { ok: false, msg: '해당 닉네임으로 등록된 계정이 없습니다.' };
+  return { ok: true, email: data };
+}
+
+/**
+ * Auth 상태 변경 리스너 등록
+ */
+function onAuthStateChangeSupabase(callback) {
+  const sb = getSupabase();
+  if (!sb) return;
+  sb.auth.onAuthStateChange((event, session) => {
+    callback(event, session);
+  });
+}
+
 // ============ 데이터 동기화 (DB) ============
 
 /**
@@ -160,25 +236,17 @@ async function pushToSupabase(data) {
 }
 
 /**
- * 계정 삭제
+ * 계정 삭제 (RPC 함수로 auth.users 직접 삭제 → CASCADE로 profiles/payments 정리)
  */
 async function deleteAccountSupabase() {
   const sb = getSupabase();
   if (!sb) return;
 
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return;
-
-  // profiles 테이블 삭제 시 DB 트리거에 의해 auth.users 계정도 함께 삭제됩니다.
-  const { error } = await sb.from('profiles').delete().eq('id', user.id);
-
+  const { error } = await sb.rpc('delete_own_account');
   if (error) {
-    console.error('프로필 삭제 중 오류 발생:', error); // <-- 오류 로깅 추가
-    // 오류 발생 시는 로그아웃하지 않음 (다시 시도할 수 있도록)
-    return;
+    console.error('계정 삭제 오류:', error);
+    throw error;
   }
-  
-  // profiles이 삭제되면 payments도 ON DELETE CASCADE에 의해 삭제됩니다.
-  
+
   await sb.auth.signOut();
 }

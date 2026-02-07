@@ -89,6 +89,19 @@ async function deleteAccount() {
   window.location.reload();
 }
 
+async function updateNickname(nickname) {
+  if (!nickname || !nickname.trim()) return { ok: false, msg: '닉네임을 입력해주세요.' };
+  try {
+    const result = await updateNicknameSupabase(nickname.trim());
+    if (result.ok) {
+      currentUserNick = nickname.trim();
+    }
+    return result;
+  } catch (e) {
+    return { ok: false, msg: '닉네임 변경 중 오류가 발생했습니다.' };
+  }
+}
+
 // ============ 데이터 관리 ============
 
 function getStorageKey() {

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -19,42 +20,135 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-    * { font-family: 'Noto Sans KR', sans-serif; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body { background: #f0f4f8; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
-    .fade-in { animation: fadeIn 0.25s ease-out; }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    * {
+      font-family: 'Noto Sans KR', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f0f4f8;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .modal-overlay {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     .keypad-btn {
-      display:flex; align-items:center; justify-content:center;
-      font-size:1.75rem; font-weight:700; border-radius:1rem;
-      background:#fff; color:#1e3a5f; border:2px solid #e2e8f0;
-      transition:all 0.1s; min-height:4rem; cursor:pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      font-weight: 700;
+      border-radius: 1rem;
+      background: #fff;
+      color: #1e3a5f;
+      border: 2px solid #e2e8f0;
+      transition: all 0.1s;
+      min-height: 4rem;
+      cursor: pointer;
     }
-    .keypad-btn:active { background:#e2e8f0; transform:scale(0.95); }
+
+    .keypad-btn:active {
+      background: #e2e8f0;
+      transform: scale(0.95);
+    }
+
     .quick-btn {
-      background:#e8f0fe; color:#1e3a5f; font-weight:700; font-size:1rem;
-      padding:0.6rem 0.5rem; border-radius:1rem; border:2px solid #bdd0ec;
-      cursor:pointer; transition:all 0.1s;
+      background: #e8f0fe;
+      color: #1e3a5f;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.6rem 0.5rem;
+      border-radius: 1rem;
+      border: 2px solid #bdd0ec;
+      cursor: pointer;
+      transition: all 0.1s;
     }
-    .quick-btn:active { background:#bdd0ec; transform:scale(0.95); }
+
+    .quick-btn:active {
+      background: #bdd0ec;
+      transform: scale(0.95);
+    }
+
     .setup-input {
-      font-size:2rem; font-weight:900; text-align:center;
-      border:3px solid #1e3a5f; border-radius:1rem; padding:1rem;
-      width:100%; color:#1e3a5f; background:#fff; outline:none;
+      font-size: 2rem;
+      font-weight: 900;
+      text-align: center;
+      border: 3px solid #1e3a5f;
+      border-radius: 1rem;
+      padding: 1rem;
+      width: 100%;
+      color: #1e3a5f;
+      background: #fff;
+      outline: none;
     }
-    .setup-input:focus { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,0.2); }
+
+    .setup-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+    }
+
     .auth-input {
-      width:100%; text-align:center; font-size:1.25rem; font-weight:700;
-      padding:1rem; border:2px solid #e2e8f0; border-radius:1rem;
-      outline:none; transition:all 0.2s; background:#fff; color:#1e3a5f;
+      width: 100%;
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 1rem;
+      outline: none;
+      transition: all 0.2s;
+      background: #fff;
+      color: #1e3a5f;
     }
-    .auth-input:focus { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,0.15); }
-    .auth-input::placeholder { color:#cbd5e1; font-weight:400; }
+
+    .auth-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    }
+
+    .auth-input::placeholder {
+      color: #cbd5e1;
+      font-weight: 400;
+    }
   </style>
 </head>
+
 <body class="min-h-screen">
 
   <!-- ==================== 로그인/회원가입 화면 ==================== -->
@@ -62,7 +156,8 @@
     <div class="w-full max-w-sm text-center fade-in">
       <!-- 로고 -->
       <div class="mb-8">
-        <div class="w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] rounded-3xl mx-auto flex items-center justify-center shadow-lg mb-6">
+        <div
+          class="w-24 h-24 bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] rounded-3xl mx-auto flex items-center justify-center shadow-lg mb-6">
           <span class="text-5xl">💰</span>
         </div>
         <h1 class="text-3xl font-black text-[#1e3a5f]">마이너스 통장</h1>
@@ -84,6 +179,11 @@
           계정이 없으신가요?
           <button onclick="showSignup()" class="text-blue-500 font-bold active:text-blue-700 ml-1">회원가입</button>
         </p>
+        <div class="flex justify-center gap-4 mt-3">
+          <button onclick="openFindEmailModal()" class="text-gray-400 text-sm active:text-gray-600">이메일 찾기</button>
+          <span class="text-gray-300">|</span>
+          <button onclick="openResetPwModal()" class="text-gray-400 text-sm active:text-gray-600">비밀번호 찾기</button>
+        </div>
       </div>
 
       <!-- 회원가입 폼 -->
@@ -118,9 +218,19 @@
           <h1 class="text-2xl font-bold">마이너스 통장</h1>
           <p class="text-blue-200 text-base" id="welcomeText">돈 갚아라</p>
         </div>
-        <button onclick="doLogout()" class="text-blue-200 active:text-white text-sm bg-white/10 px-3 py-2 rounded-xl transition-colors">
-          로그아웃
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="openSettingsModal()"
+            class="text-blue-200 active:text-white text-sm bg-white/10 px-3 py-2 rounded-xl transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+          <button onclick="doLogout()"
+            class="text-blue-200 active:text-white text-sm bg-white/10 px-3 py-2 rounded-xl transition-colors">
+            로그아웃
+          </button>
+        </div>
       </div>
 
       <!-- 남은 금액 -->
@@ -143,7 +253,8 @@
 
       <!-- 진행률 바 -->
       <div class="mt-4 bg-white/20 rounded-full h-4 overflow-hidden">
-        <div class="bg-green-400 h-full rounded-full transition-all duration-500" id="progressBar" style="width:0%"></div>
+        <div class="bg-green-400 h-full rounded-full transition-all duration-500" id="progressBar" style="width:0%">
+        </div>
       </div>
       <p class="text-center text-blue-200 text-sm mt-1" id="progressText">0% 완료</p>
     </header>
@@ -199,10 +310,90 @@
 
   </div>
 
+  <!-- ========== 이메일 찾기 모달 ========== -->
+  <div id="findEmailModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeFindEmailModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">이메일 찾기</h3>
+      <p class="text-gray-400 text-center mb-6">가입 시 사용한 닉네임을 입력하세요</p>
+      <input id="findEmailNick" type="text" placeholder="닉네임"
+        class="auth-input mb-4" onkeydown="if(event.key==='Enter') doFindEmail()">
+      <p id="findEmailResult" class="text-center text-base font-bold mb-4 hidden"></p>
+      <div class="flex gap-3">
+        <button onclick="closeFindEmailModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">닫기</button>
+        <button onclick="doFindEmail()"
+          class="flex-1 bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-xl active:bg-[#152d4a] transition-all">찾기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 비밀번호 찾기 모달 ========== -->
+  <div id="resetPwModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeResetPwModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">비밀번호 찾기</h3>
+      <p class="text-gray-400 text-center mb-6">가입한 이메일로 재설정 링크를 보내드립니다</p>
+      <input id="resetPwEmail" type="email" placeholder="이메일"
+        class="auth-input mb-4" onkeydown="if(event.key==='Enter') doResetPw()">
+      <p id="resetPwResult" class="text-center text-base font-bold mb-4 hidden"></p>
+      <div class="flex gap-3">
+        <button onclick="closeResetPwModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">닫기</button>
+        <button onclick="doResetPw()"
+          class="flex-1 bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-xl active:bg-[#152d4a] transition-all">전송</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 새 비밀번호 입력 모달 (리커버리 시) ========== -->
+  <div id="newPwModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">새 비밀번호 설정</h3>
+      <p class="text-gray-400 text-center mb-6">새로운 비밀번호를 입력해주세요</p>
+      <input id="newPw1" type="password" placeholder="새 비밀번호 (6자 이상)"
+        class="auth-input mb-3" onkeydown="if(event.key==='Enter') document.getElementById('newPw2').focus()">
+      <input id="newPw2" type="password" placeholder="비밀번호 확인"
+        class="auth-input mb-4" onkeydown="if(event.key==='Enter') doSetNewPw()">
+      <p id="newPwResult" class="text-center text-base font-bold mb-4 hidden"></p>
+      <button onclick="doSetNewPw()"
+        class="w-full bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-2xl active:bg-[#152d4a] transition-all">변경 완료</button>
+    </div>
+  </div>
+
+  <!-- ========== 개인정보 설정 모달 ========== -->
+  <div id="settingsModal" class="fixed inset-0 z-50 hidden">
+    <div class="modal-overlay absolute inset-0" onclick="closeSettingsModal()"></div>
+    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+      <h3 class="text-2xl font-bold text-gray-700 text-center mb-6">내 정보</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-bold text-gray-400 mb-1 block">이메일</label>
+          <input id="settingsEmail" type="text" readonly
+            class="w-full text-base p-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-500 font-semibold">
+        </div>
+        <div>
+          <label class="text-sm font-bold text-gray-400 mb-1 block">닉네임</label>
+          <input id="settingsNick" type="text" placeholder="닉네임 입력"
+            class="w-full text-base p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-blue-400 text-[#1e3a5f] font-semibold">
+        </div>
+      </div>
+      <p id="settingsMsg" class="text-center text-sm font-bold mt-3 hidden"></p>
+      <div class="flex gap-3 mt-6">
+        <button onclick="closeSettingsModal()"
+          class="flex-1 bg-gray-100 text-gray-600 text-xl font-bold py-4 rounded-xl active:bg-gray-200 transition-all">닫기</button>
+        <button onclick="saveSettings()"
+          class="flex-1 bg-[#1e3a5f] text-white text-xl font-bold py-4 rounded-xl active:bg-[#152d4a] transition-all">저장</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ========== 회원탈퇴 확인 모달 ========== -->
   <div id="deleteAccountModal" class="fixed inset-0 z-50 hidden">
     <div class="modal-overlay absolute inset-0" onclick="closeDeleteAccountModal()"></div>
-    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+    <div
+      class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
       <h3 class="text-2xl font-bold text-red-500 text-center mb-2">회원탈퇴</h3>
       <p class="text-gray-500 text-center text-lg mb-6">탈퇴하면 모든 데이터가 삭제됩니다.<br>정말 탈퇴하시겠습니까?</p>
       <div class="flex gap-3">
@@ -215,7 +406,9 @@
   </div>
 
   <!-- 하단 네비게이션 -->
-  <nav id="bottomNav" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex max-w-lg mx-auto shadow-[0_-2px_10px_rgba(0,0,0,0.05)]"></nav>
+  <nav id="bottomNav"
+    class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex max-w-lg mx-auto shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+  </nav>
 
   <!-- ========== 상환 입력 모달 ========== -->
   <div id="paymentModal" class="fixed inset-0 z-50 hidden">
@@ -260,7 +453,8 @@
   <!-- ========== 총금액 설정 모달 ========== -->
   <div id="setupModal" class="fixed inset-0 z-50 hidden">
     <div class="modal-overlay absolute inset-0" onclick="closeSetupModal()"></div>
-    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+    <div
+      class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
       <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">총 금액 설정</h3>
       <p class="text-gray-400 text-center mb-6">갚아야 할 전체 금액을 입력하세요</p>
       <input id="setupInput" type="number" inputmode="numeric" placeholder="금액 입력" class="setup-input mb-6">
@@ -276,7 +470,8 @@
   <!-- ========== 데이터 가져오기 모달 ========== -->
   <div id="importModal" class="fixed inset-0 z-50 hidden">
     <div class="modal-overlay absolute inset-0" onclick="closeImportModal()"></div>
-    <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
+    <div
+      class="absolute inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-3xl shadow-2xl p-8 fade-in max-w-lg mx-auto">
       <h3 class="text-2xl font-bold text-gray-700 text-center mb-2">데이터 가져오기</h3>
       <p class="text-gray-400 text-center mb-4">내보낸 데이터를 아래에 붙여넣으세요</p>
       <textarea id="importTextarea" rows="6"
@@ -365,13 +560,13 @@
       const pw = document.getElementById('signupPw').value.trim();
 
       if (!email || !nick || !pw) { showAuthError('signupError', '모든 정보를 입력해주세요.'); return; }
-      
+
       setAuthLoading('signup', true);
 
       const result = await signup(email, pw, nick);
       if (result.ok) {
         setAuthLoading('signup', false);
-        
+
         // 바로 로그인 성공한 경우 (common.js signup 로직 참조)
         if (isAuthenticated()) {
           showApp();
@@ -456,7 +651,7 @@
       let html = '';
       recent.forEach(item => {
         const d = new Date(item.date);
-        const dayStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
+        const dayStr = `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
         const memo = item.memo ? `<span class="text-gray-400 text-sm ml-2">${escapeHtml(item.memo)}</span>` : '';
         const isSpend = item.type === 'spend';
         const sign = isSpend ? '+' : '-';
@@ -595,7 +790,7 @@
       const blob = new Blob([text], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `마이너스통장_백업_${getCurrentUser()}_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `마이너스통장_백업_${getCurrentUser()}_${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
     }
@@ -630,8 +825,142 @@
     function closeDeleteAccountModal() { document.getElementById('deleteAccountModal').classList.add('hidden'); }
     function confirmDeleteAccount() { deleteAccount(); }
 
+    // ============ 개인정보 설정 ============
+    function openSettingsModal() {
+      document.getElementById('settingsEmail').value = getCurrentUser() || '';
+      document.getElementById('settingsNick').value = getNickname() || '';
+      document.getElementById('settingsMsg').classList.add('hidden');
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+
+    async function saveSettings() {
+      const nick = document.getElementById('settingsNick').value.trim();
+      const msgEl = document.getElementById('settingsMsg');
+      if (!nick) {
+        msgEl.textContent = '닉네임을 입력해주세요.';
+        msgEl.className = 'text-center text-sm font-bold mt-3 text-red-500';
+        msgEl.classList.remove('hidden');
+        return;
+      }
+      const result = await updateNickname(nick);
+      if (result.ok) {
+        msgEl.textContent = '저장되었습니다!';
+        msgEl.className = 'text-center text-sm font-bold mt-3 text-green-600';
+        msgEl.classList.remove('hidden');
+        document.getElementById('welcomeText').textContent = nick + '님, 돈 갚아라';
+        setTimeout(() => closeSettingsModal(), 1000);
+      } else {
+        msgEl.textContent = result.msg || '저장 실패';
+        msgEl.className = 'text-center text-sm font-bold mt-3 text-red-500';
+        msgEl.classList.remove('hidden');
+      }
+    }
+
+    // ============ 이메일 찾기 ============
+    function openFindEmailModal() {
+      document.getElementById('findEmailNick').value = '';
+      document.getElementById('findEmailResult').classList.add('hidden');
+      document.getElementById('findEmailModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('findEmailNick').focus(), 100);
+    }
+    function closeFindEmailModal() { document.getElementById('findEmailModal').classList.add('hidden'); }
+
+    async function doFindEmail() {
+      const nick = document.getElementById('findEmailNick').value.trim();
+      const resultEl = document.getElementById('findEmailResult');
+      if (!nick) {
+        resultEl.textContent = '닉네임을 입력해주세요.';
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+      const result = await findEmailByNicknameSupabase(nick);
+      if (result.ok) {
+        resultEl.textContent = '가입된 이메일: ' + result.email;
+        resultEl.className = 'text-center text-base font-bold mb-4 text-blue-600';
+      } else {
+        resultEl.textContent = result.msg;
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+      }
+      resultEl.classList.remove('hidden');
+    }
+
+    // ============ 비밀번호 찾기 ============
+    function openResetPwModal() {
+      document.getElementById('resetPwEmail').value = '';
+      document.getElementById('resetPwResult').classList.add('hidden');
+      document.getElementById('resetPwModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('resetPwEmail').focus(), 100);
+    }
+    function closeResetPwModal() { document.getElementById('resetPwModal').classList.add('hidden'); }
+
+    async function doResetPw() {
+      const email = document.getElementById('resetPwEmail').value.trim();
+      const resultEl = document.getElementById('resetPwResult');
+      if (!email) {
+        resultEl.textContent = '이메일을 입력해주세요.';
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+      const result = await resetPasswordSupabase(email);
+      if (result.ok) {
+        resultEl.textContent = '재설정 링크를 이메일로 보냈습니다. 메일함을 확인하세요.';
+        resultEl.className = 'text-center text-base font-bold mb-4 text-green-600';
+      } else {
+        resultEl.textContent = result.msg;
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+      }
+      resultEl.classList.remove('hidden');
+    }
+
+    // ============ 새 비밀번호 설정 (리커버리) ============
+    async function doSetNewPw() {
+      const pw1 = document.getElementById('newPw1').value;
+      const pw2 = document.getElementById('newPw2').value;
+      const resultEl = document.getElementById('newPwResult');
+
+      if (!pw1 || pw1.length < 6) {
+        resultEl.textContent = '비밀번호는 6자 이상이어야 합니다.';
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+      if (pw1 !== pw2) {
+        resultEl.textContent = '비밀번호가 일치하지 않습니다.';
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+
+      const result = await updatePasswordSupabase(pw1);
+      if (result.ok) {
+        resultEl.textContent = '비밀번호가 변경되었습니다!';
+        resultEl.className = 'text-center text-base font-bold mb-4 text-green-600';
+        resultEl.classList.remove('hidden');
+        setTimeout(() => {
+          document.getElementById('newPwModal').classList.add('hidden');
+          window.location.reload();
+        }, 1500);
+      } else {
+        resultEl.textContent = result.msg;
+        resultEl.className = 'text-center text-base font-bold mb-4 text-red-500';
+        resultEl.classList.remove('hidden');
+      }
+    }
+
     // ============ 초기화 ============
     (async function init() {
+      // 비밀번호 리커버리 이벤트 감지
+      if (typeof onAuthStateChangeSupabase === 'function') {
+        onAuthStateChangeSupabase((event, session) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            document.getElementById('newPwModal').classList.remove('hidden');
+          }
+        });
+      }
+
       const isAuth = await initAuth();
       if (isAuth) {
         // 로그인 상태면 데이터 동기화 후 앱 표시
@@ -645,4 +974,5 @@
     })();
   </script>
 </body>
+
 </html>
