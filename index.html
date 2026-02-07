@@ -239,24 +239,6 @@
         <p class="text-5xl font-black tracking-tight" id="remainingAmount">0원</p>
       </div>
 
-      <!-- 총금액 / 갚은 금액 -->
-      <div class="mt-4 flex gap-3">
-        <div class="flex-1 bg-white/10 rounded-xl p-3 text-center">
-          <p class="text-blue-200 text-sm">총 금액</p>
-          <p class="text-xl font-bold" id="totalAmount">0원</p>
-        </div>
-        <div class="flex-1 bg-white/10 rounded-xl p-3 text-center">
-          <p class="text-blue-200 text-sm">갚은 금액</p>
-          <p class="text-xl font-bold" id="paidAmount">0원</p>
-        </div>
-      </div>
-
-      <!-- 진행률 바 -->
-      <div class="mt-4 bg-white/20 rounded-full h-4 overflow-hidden">
-        <div class="bg-green-400 h-full rounded-full transition-all duration-500" id="progressBar" style="width:0%">
-        </div>
-      </div>
-      <p class="text-center text-blue-200 text-sm mt-1" id="progressText">0% 완료</p>
     </header>
 
     <!-- 상환 / 추가 지출 버튼 -->
@@ -613,24 +595,10 @@
     // ============ 대시보드 ============
     function updateDashboard() {
       const repaid = getPaidTotal(appData);
-      const spent = getSpendTotal(appData);
       const effectiveTotal = getEffectiveTotal(appData);
-      const netRepaid = Math.max(0, repaid - spent);
       const remaining = Math.max(0, effectiveTotal - repaid);
-      const progress = (netRepaid <= 0 || appData.totalAmount <= 0) ? 0 : Math.min(100, (netRepaid / appData.totalAmount) * 100);
 
       document.getElementById('remainingAmount').textContent = formatMoney(remaining);
-      document.getElementById('totalAmount').textContent = formatMoney(effectiveTotal);
-      document.getElementById('paidAmount').textContent = formatMoney(netRepaid);
-      document.getElementById('progressBar').style.width = progress + '%';
-
-      if (progress >= 100) {
-        document.getElementById('progressBar').className = 'bg-yellow-400 h-full rounded-full transition-all duration-500';
-        document.getElementById('progressText').textContent = '모두 갚았습니다!';
-      } else {
-        document.getElementById('progressBar').className = 'bg-green-400 h-full rounded-full transition-all duration-500';
-        document.getElementById('progressText').textContent = Math.round(progress) + '% 완료';
-      }
     }
 
     // ============ 최근 내역 (최대 5개) ============
